@@ -1,26 +1,62 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #f7f2ea;
+  --foreground: #191815;
+  --ink: #0d0d0d;
+  --charcoal: #30302b;
+  --cream: #f7f2ea;
+  --gallery-white: #fffaf2;
+  --gold: #d3b334;
+  --stone: #5d5850;
+  --radius-card: 8px;
+  --container-site: 110rem;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-ink: var(--ink);
+  --color-charcoal: var(--charcoal);
+  --color-cream: var(--cream);
+  --color-gallery-white: var(--gallery-white);
+  --color-gold: var(--gold);
+  --color-stone: var(--stone);
+  --radius-card: var(--radius-card);
+  --font-sans: "Geist", "Geist Fallback", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "Geist Mono", "Geist Mono Fallback", ui-monospace, monospace;
+  --font-serif: "Cormorant Garamond", Georgia, serif;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
+}
+
+a {
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.25em;
+}
+
+.mobile-menu-toggle {
+  position: fixed;
+  right: 1rem;
+  top: 1.25rem;
+  z-index: 60;
+  display: inline-flex;
+}
+
+@media (min-width: 48rem) {
+  .mobile-menu-toggle {
+    display: none;
+  }
 }
