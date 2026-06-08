@@ -8,13 +8,53 @@ import { useCart } from "@/components/cart/cart-context";
 import { formatCurrency } from "@/lib/format";
 import { routes } from "@/lib/routes";
 
+type SubmitState =
+  | { status: "idle" }
+  | { status: "submitting" }
+  | { status: "success"; requestId: string }
+  | { status: "error"; message: string };
+
 export function CheckoutClient() {
   const { clearCart, decrementItem, incrementItem, itemCount, items, removeItem, total } = useCart();
-  const [isSubmitted, setIsSubmitted] = useState(false);
+  const [submitState, setSubmitState] = useState<SubmitState>({ status: "idle" });
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setIsSubmitted(true);
+
+    const formData = new FormData(event.currentTarget);
+
+    setSubmitState({ status: "submitting" });
+
+    try {
+      const response = await fetch("/api/checkout-requests", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          customer: {
+            name: formData.get("name"),
+            email: formData.get("email"),
+            phone: formData.get("phone"),
+            note: formData.get("note"),
+          },
+          items,
+        }),
+      });
+
+      const result = (await response.json()) as { requestId?: string; error?: string };
+
+      if (!response.ok || !result.requestId) {
+        throw new Error(result.error ?? "We could not save your checkout request.");
+      }
+
+      setSubmitState({ status: "success", requestId: result.requestId });
+    } catch (error) {
+      setSubmitState({
+        status: "error",
+        message: error instanceof Error ? error.message : "We could not save your checkout request.",
+      });
+    }
   }
 
   if (items.length === 0) {
@@ -189,9 +229,12 @@ export function CheckoutClient() {
               </div>
               <button
                 type="submit"
+                disabled={submitState.status === "submitting"}
                 className="flex min-h-13 w-full items-center justify-center rounded-full bg-gold px-8 text-xs font-semibold uppercase tracking-[0.22em] text-ink transition-colors hover:bg-gallery-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-gold"
               >
-                Request Checkout Details
+                {submitState.status === "submitting"
+                  ? "Saving Selection..."
+                  : "Request Checkout Details"}
               </button>
               <button
                 type="button"
@@ -200,10 +243,16 @@ export function CheckoutClient() {
               >
                 Clear Selection
               </button>
-              {isSubmitted ? (
+              {submitState.status === "success" ? (
                 <p className="rounded-card border border-gold/35 bg-gold/10 px-4 py-3 text-sm leading-6 text-gallery-white">
-                  Your selection is ready for the next step. We will connect this form to
-                  Supabase and Paystack when the checkout flow is approved.
+                  Your selection has been saved. Request reference:{" "}
+                  <span className="font-semibold">{submitState.requestId.slice(0, 8)}</span>.
+                  We will connect Paystack payment after the checkout flow is approved.
+                </p>
+              ) : null}
+              {submitState.status === "error" ? (
+                <p className="rounded-card border border-red-300/35 bg-red-950/30 px-4 py-3 text-sm leading-6 text-gallery-white">
+                  {submitState.message}
                 </p>
               ) : null}
             </form>
