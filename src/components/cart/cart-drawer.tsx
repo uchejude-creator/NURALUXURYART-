@@ -127,14 +127,14 @@ export function CartDrawer() {
             <span className="font-semibold text-ink">{formatCurrency(total)}</span>
           </div>
           <Link
-            href="/#contact"
+            href={routes.checkout}
             onClick={closeCart}
             className="mt-5 flex min-h-13 items-center justify-center rounded-full bg-gold px-8 text-xs font-semibold uppercase tracking-[0.22em] text-ink transition-colors hover:bg-ink hover:text-gallery-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-gold"
           >
-            Request purchase
+            Continue to checkout
           </Link>
           <p className="mt-4 text-center text-xs leading-5 text-stone">
-            Online Paystack checkout will be connected after the approved design is locked.
+            Paystack checkout will be connected after the purchase flow is approved.
           </p>
         </div>
       </aside>
