@@ -8,7 +8,7 @@ export const metadata = {
 
 export default function CollectionsPage() {
   return (
-    <main className="min-h-screen bg-cream px-6 py-20 text-ink lg:px-10">
+    <main className="min-h-screen bg-cream px-6 pb-20 pt-32 text-ink lg:px-10 lg:pt-40">
       <div className="mx-auto max-w-site">
         <p className="mb-5 text-xs font-semibold uppercase tracking-[0.34em] text-gold">
           Gallery

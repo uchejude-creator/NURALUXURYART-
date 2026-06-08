@@ -7,19 +7,19 @@ export const siteConfig = {
   locale: "en",
   currency: "NGN",
   nav: [
-    { label: "Shop", href: "#featured-artworks" },
-    { label: "Gallery", href: "#curated-collections" },
-    { label: "Our Story", href: "#our-story" },
-    { label: "Contact", href: "#contact" },
+    { label: "Shop", href: "/#featured-artworks" },
+    { label: "Gallery", href: "/#curated-collections" },
+    { label: "Our Story", href: "/#our-story" },
+    { label: "Contact", href: "/#contact" },
   ],
   footerGroups: [
     {
       title: "Company",
       links: [
-        { label: "About NURALUXURYART", href: "#our-story" },
-        { label: "Our Story", href: "#our-story" },
-        { label: "Custom Orders", href: "#collector-care" },
-        { label: "Contact", href: "#contact" },
+        { label: "About NURALUXURYART", href: "/#our-story" },
+        { label: "Our Story", href: "/#our-story" },
+        { label: "Custom Orders", href: "/#collector-care" },
+        { label: "Contact", href: "/#contact" },
       ],
     },
     {
@@ -41,10 +41,10 @@ export const siteConfig = {
     },
   ],
   socialLinks: [
-    { label: "Instagram", href: "#" },
-    { label: "Facebook", href: "#" },
-    { label: "TikTok", href: "#" },
-    { label: "X", href: "#" },
-    { label: "WhatsApp", href: "#" },
+    { label: "Instagram", href: "#contact" },
+    { label: "Facebook", href: "#contact" },
+    { label: "TikTok", href: "#contact" },
+    { label: "X", href: "#contact" },
+    { label: "WhatsApp", href: "#contact" },
   ],
 } as const;

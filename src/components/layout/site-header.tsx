@@ -1,9 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
+import { useEffect, useRef, useState } from "react";
 
 import { siteConfig } from "@/config/site";
+import { useCart } from "@/components/cart/cart-context";
 
 function BrandWordmark({ onClick }: { onClick?: () => void }) {
   return (
@@ -22,17 +24,31 @@ function BrandWordmark({ onClick }: { onClick?: () => void }) {
 export function SiteHeader() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
+  const [isHeaderHidden, setIsHeaderHidden] = useState(false);
+  const lastScrollY = useRef(0);
+  const pathname = usePathname();
+  const { itemCount, isCartOpen, openCart } = useCart();
+  const isHomePage = pathname === "/";
 
   useEffect(() => {
     const handleScroll = () => {
-      setIsScrolled(window.scrollY > 24);
+      const currentScrollY = window.scrollY;
+
+      setIsScrolled(currentScrollY > 24);
+      setIsHeaderHidden(
+        currentScrollY > lastScrollY.current &&
+          currentScrollY > 140 &&
+          !isMenuOpen &&
+          !isCartOpen,
+      );
+      lastScrollY.current = currentScrollY;
     };
 
     handleScroll();
     window.addEventListener("scroll", handleScroll, { passive: true });
 
     return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
+  }, [isCartOpen, isMenuOpen]);
 
   useEffect(() => {
     document.body.style.overflow = isMenuOpen ? "hidden" : "";
@@ -42,10 +58,14 @@ export function SiteHeader() {
     };
   }, [isMenuOpen]);
 
+  const isTransparent = isHomePage && !isScrolled && !isMenuOpen;
+
   return (
     <header
-      className={`fixed left-0 top-0 z-50 w-full text-gallery-white transition-colors duration-300 ${
-        isScrolled ? "bg-ink/55 shadow-[0_1px_0_rgba(255,255,255,0.08)] backdrop-blur-xl" : "bg-transparent"
+      className={`fixed left-0 top-0 z-50 w-full text-gallery-white transition-[transform,background-color,box-shadow] duration-300 ${
+        isHeaderHidden ? "-translate-y-full" : "translate-y-0"
+      } ${
+        isTransparent ? "bg-transparent" : "bg-ink/78 shadow-[0_1px_0_rgba(255,255,255,0.08)] backdrop-blur-xl"
       }`}
     >
       <div className="relative z-20 mx-auto flex h-20 max-w-site items-center justify-between px-7 sm:px-10 lg:h-24 lg:px-16">
@@ -63,29 +83,57 @@ export function SiteHeader() {
           ))}
         </nav>
 
-        <button
-          type="button"
-          className="mobile-menu-toggle h-10 w-10 flex-col items-center justify-center gap-1.5 text-gallery-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.85)] transition-colors hover:text-gold focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-gold"
-          aria-label={isMenuOpen ? "Close navigation menu" : "Open navigation menu"}
-          aria-expanded={isMenuOpen}
-          onClick={() => setIsMenuOpen((value) => !value)}
-        >
-          <span
-            className={`h-0.5 w-5 bg-current transition-transform ${
-              isMenuOpen ? "translate-y-2 rotate-45" : ""
-            }`}
-          />
-          <span className={`h-0.5 w-5 bg-current transition-opacity ${isMenuOpen ? "opacity-0" : ""}`} />
-          <span
-            className={`h-0.5 w-5 bg-current transition-transform ${
-              isMenuOpen ? "-translate-y-2 -rotate-45" : ""
-            }`}
-          />
-        </button>
+        <div className="flex items-center gap-2 sm:gap-4">
+          <button
+            type="button"
+            onClick={openCart}
+            className="relative flex h-10 w-10 items-center justify-center rounded-full text-gallery-white transition-colors hover:text-gold focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-gold"
+            aria-label={`Open shopping cart with ${itemCount} selected artwork${itemCount === 1 ? "" : "s"}`}
+          >
+            <svg
+              aria-hidden="true"
+              viewBox="0 0 24 24"
+              className="h-5 w-5"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.8"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M6.5 8.5h11l-.7 10.2a2 2 0 0 1-2 1.8H9.2a2 2 0 0 1-2-1.8L6.5 8.5Z" />
+              <path d="M9 8.5a3 3 0 0 1 6 0" />
+            </svg>
+            {itemCount > 0 ? (
+              <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-gold px-1 text-[0.62rem] font-bold text-ink">
+                {itemCount}
+              </span>
+            ) : null}
+          </button>
+
+          <button
+            type="button"
+            className="flex h-10 w-10 flex-col items-center justify-center gap-1.5 text-gallery-white transition-colors hover:text-gold focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-gold md:hidden"
+            aria-label={isMenuOpen ? "Close navigation menu" : "Open navigation menu"}
+            aria-expanded={isMenuOpen}
+            onClick={() => setIsMenuOpen((value) => !value)}
+          >
+            <span
+              className={`h-0.5 w-5 bg-current transition-transform ${
+                isMenuOpen ? "translate-y-2 rotate-45" : ""
+              }`}
+            />
+            <span className={`h-0.5 w-5 bg-current transition-opacity ${isMenuOpen ? "opacity-0" : ""}`} />
+            <span
+              className={`h-0.5 w-5 bg-current transition-transform ${
+                isMenuOpen ? "-translate-y-2 -rotate-45" : ""
+              }`}
+            />
+          </button>
+        </div>
       </div>
 
       <div
-        className={`fixed right-0 top-0 z-10 h-dvh w-[min(82vw,22rem)] border-l border-gallery-white/10 bg-ink/95 px-8 pb-10 pt-28 shadow-2xl backdrop-blur-xl transition-transform duration-300 md:hidden ${
+        className={`fixed right-0 top-20 z-10 h-[calc(100dvh-5rem)] w-[min(82vw,22rem)] border-l border-gallery-white/10 bg-ink/95 px-8 py-10 shadow-2xl backdrop-blur-xl transition-transform duration-300 md:hidden ${
           isMenuOpen ? "translate-x-0" : "translate-x-full"
         }`}
       >

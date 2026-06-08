@@ -6,6 +6,7 @@ export type Artwork = {
   slug: string;
   collectionSlug: string;
   medium: string;
+  description: string;
   price: number | null;
   currency: "NGN";
   availability: ArtworkAvailability;

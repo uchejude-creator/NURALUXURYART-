@@ -34,12 +34,14 @@
 
 html {
   scroll-behavior: smooth;
+  scroll-padding-top: 7rem;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
+  overflow-x: hidden;
 }
 
 a {
@@ -47,16 +49,28 @@ a {
   text-underline-offset: 0.25em;
 }
 
-.mobile-menu-toggle {
-  position: fixed;
-  right: 1rem;
-  top: 1.25rem;
-  z-index: 60;
-  display: inline-flex;
+.reveal-on-scroll {
+  opacity: 0;
+  transform: translateY(2rem);
+  transition:
+    opacity 700ms ease,
+    transform 700ms ease;
+  will-change: opacity, transform;
 }
 
-@media (min-width: 48rem) {
-  .mobile-menu-toggle {
-    display: none;
+.reveal-on-scroll.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  .reveal-on-scroll {
+    opacity: 1;
+    transform: none;
+    transition: none;
   }
 }
