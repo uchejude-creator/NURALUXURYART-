@@ -15,7 +15,7 @@ export function SiteFooter() {
               </h2>
               <ul className="mt-6 space-y-4 text-sm text-gallery-white/70">
                 {group.links.map((link) => (
-                  <li key={link.href}>
+                  <li key={`${group.title}-${link.label}-${link.href}`}>
                     <Link className="transition-colors hover:text-gold" href={link.href}>
                       {link.label}
                     </Link>

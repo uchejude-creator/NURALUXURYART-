@@ -15,14 +15,14 @@ export function CartDrawer() {
   return (
     <>
       <div
-        className={`fixed inset-0 z-[70] bg-ink/60 transition-opacity duration-300 ${
+        className={`fixed inset-0 z-[70] hidden bg-ink/60 transition-opacity duration-300 md:block ${
           isCartOpen ? "opacity-100" : "pointer-events-none opacity-0"
         }`}
         aria-hidden="true"
         onClick={closeCart}
       />
       <aside
-        className={`fixed right-0 top-0 z-[80] flex h-dvh w-[min(100vw,28rem)] flex-col bg-gallery-white text-ink shadow-2xl transition-transform duration-300 ${
+        className={`fixed right-0 top-0 z-[80] hidden h-dvh w-[min(100vw,28rem)] flex-col bg-gallery-white text-ink shadow-2xl transition-transform duration-300 md:flex ${
           isCartOpen ? "translate-x-0" : "translate-x-full"
         }`}
         aria-label="Shopping cart"

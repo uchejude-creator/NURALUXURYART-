@@ -39,14 +39,8 @@ export function ArtworkCard({ artwork }: ArtworkCardProps) {
             <p className="mt-1 text-sm text-stone">{artwork.medium}</p>
           </div>
           <p className="mt-3 text-sm leading-6 text-stone">{artwork.description}</p>
-          <div className="mt-auto flex flex-col gap-3 pt-5 min-[420px]:flex-row">
-            <AddToCartButton artwork={artwork} variant="compact" className="flex-1" />
-            <Link
-              href={routes.artwork(artwork.slug)}
-              className="inline-flex min-h-11 flex-1 items-center justify-center rounded-full border border-ink/25 px-6 text-[0.66rem] font-bold uppercase tracking-[0.18em] text-ink transition-colors hover:border-gold hover:text-gold focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-gold"
-            >
-              View piece
-            </Link>
+          <div className="mt-auto pt-5">
+            <AddToCartButton artwork={artwork} className="w-full" />
           </div>
         </div>
       </article>

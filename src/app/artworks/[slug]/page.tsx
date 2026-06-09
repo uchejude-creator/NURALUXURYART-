@@ -5,6 +5,7 @@ import Link from "next/link";
 import { AddToCartButton } from "@/components/cart/add-to-cart-button";
 import { featuredArtworks, signatureArtwork } from "@/data/featured-artworks";
 import { formatCurrency } from "@/lib/format";
+import { routes } from "@/lib/routes";
 
 const artworks = [...featuredArtworks, signatureArtwork];
 
@@ -72,7 +73,7 @@ export default async function ArtworkPage({ params }: ArtworkPageProps) {
           <div className="mt-10 flex flex-col gap-4 sm:flex-row">
             <AddToCartButton artwork={artwork} className="sm:min-w-52" />
             <Link
-              href="/#contact"
+              href={routes.contact}
               className="inline-flex min-h-11 items-center justify-center rounded-full border border-ink/25 px-8 text-xs font-semibold uppercase tracking-[0.22em] text-ink transition-colors hover:border-gold hover:text-gold focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-gold"
             >
               Request purchase

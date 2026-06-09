@@ -14,6 +14,12 @@ type SubmitState =
   | { status: "success"; requestId: string }
   | { status: "error"; message: string };
 
+const deliveryOptions = [
+  "Lagos delivery",
+  "Pickup or gallery consultation",
+  "Outside Lagos delivery",
+] as const;
+
 export function CheckoutClient() {
   const { clearCart, decrementItem, incrementItem, itemCount, items, removeItem, total } = useCart();
   const [submitState, setSubmitState] = useState<SubmitState>({ status: "idle" });
@@ -36,6 +42,12 @@ export function CheckoutClient() {
             name: formData.get("name"),
             email: formData.get("email"),
             phone: formData.get("phone"),
+            deliveryPreference: formData.get("deliveryPreference"),
+            deliveryCountry: formData.get("deliveryCountry"),
+            deliveryState: formData.get("deliveryState"),
+            deliveryCity: formData.get("deliveryCity"),
+            deliveryAddress: formData.get("deliveryAddress"),
+            deliveryLandmark: formData.get("deliveryLandmark"),
             note: formData.get("note"),
           },
           items,
@@ -92,8 +104,8 @@ export function CheckoutClient() {
               Review Your Selection
             </h1>
             <p className="mt-6 max-w-2xl text-base leading-8 text-stone">
-              Confirm the artworks you are interested in. Paystack payment will be connected
-              after the checkout details are approved.
+              Confirm the artworks you are interested in and share the delivery
+              details we need before final payment is prepared.
             </p>
 
             <ul className="mt-10 space-y-6">
@@ -164,7 +176,8 @@ export function CheckoutClient() {
                 <span className="font-semibold text-gallery-white">{formatCurrency(total)}</span>
               </div>
               <p className="text-xs leading-5 text-gallery-white/55">
-                Final delivery and availability will be confirmed before payment.
+                Availability, delivery handling, and final payment guidance will
+                be confirmed before Paystack payment is requested.
               </p>
             </div>
 
@@ -214,17 +227,113 @@ export function CheckoutClient() {
               </div>
               <div>
                 <label
+                  htmlFor="checkout-delivery-preference"
+                  className="text-xs font-semibold uppercase tracking-[0.2em] text-gold"
+                >
+                  Delivery preference
+                </label>
+                <select
+                  id="checkout-delivery-preference"
+                  name="deliveryPreference"
+                  required
+                  defaultValue={deliveryOptions[0]}
+                  className="mt-2 min-h-12 w-full border border-gallery-white/25 bg-ink px-4 text-sm text-gallery-white outline-none transition-colors focus:border-gold"
+                >
+                  {deliveryOptions.map((option) => (
+                    <option key={option}>{option}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div>
+                  <label
+                    htmlFor="checkout-delivery-country"
+                    className="text-xs font-semibold uppercase tracking-[0.2em] text-gold"
+                  >
+                    Country
+                  </label>
+                  <input
+                    id="checkout-delivery-country"
+                    name="deliveryCountry"
+                    required
+                    defaultValue="Nigeria"
+                    className="mt-2 min-h-12 w-full border border-gallery-white/25 bg-transparent px-4 text-sm outline-none transition-colors focus:border-gold"
+                  />
+                </div>
+                <div>
+                  <label
+                    htmlFor="checkout-delivery-state"
+                    className="text-xs font-semibold uppercase tracking-[0.2em] text-gold"
+                  >
+                    State
+                  </label>
+                  <input
+                    id="checkout-delivery-state"
+                    name="deliveryState"
+                    required
+                    placeholder="Lagos"
+                    className="mt-2 min-h-12 w-full border border-gallery-white/25 bg-transparent px-4 text-sm outline-none transition-colors placeholder:text-gallery-white/35 focus:border-gold"
+                  />
+                </div>
+              </div>
+              <div>
+                <label
+                  htmlFor="checkout-delivery-city"
+                  className="text-xs font-semibold uppercase tracking-[0.2em] text-gold"
+                >
+                  City or area
+                </label>
+                <input
+                  id="checkout-delivery-city"
+                  name="deliveryCity"
+                  required
+                  placeholder="Ikoyi, Lekki, Victoria Island..."
+                  className="mt-2 min-h-12 w-full border border-gallery-white/25 bg-transparent px-4 text-sm outline-none transition-colors placeholder:text-gallery-white/35 focus:border-gold"
+                />
+              </div>
+              <div>
+                <label
+                  htmlFor="checkout-delivery-address"
+                  className="text-xs font-semibold uppercase tracking-[0.2em] text-gold"
+                >
+                  Delivery address
+                </label>
+                <textarea
+                  id="checkout-delivery-address"
+                  name="deliveryAddress"
+                  required
+                  rows={3}
+                  className="mt-2 w-full resize-none border border-gallery-white/25 bg-transparent px-4 py-3 text-sm outline-none transition-colors placeholder:text-gallery-white/35 focus:border-gold"
+                  placeholder="Street address, building name, apartment, or delivery location"
+                />
+              </div>
+              <div>
+                <label
+                  htmlFor="checkout-delivery-landmark"
+                  className="text-xs font-semibold uppercase tracking-[0.2em] text-gold"
+                >
+                  Nearest landmark
+                </label>
+                <input
+                  id="checkout-delivery-landmark"
+                  name="deliveryLandmark"
+                  placeholder="Optional but helpful for delivery"
+                  className="mt-2 min-h-12 w-full border border-gallery-white/25 bg-transparent px-4 text-sm outline-none transition-colors placeholder:text-gallery-white/35 focus:border-gold"
+                />
+              </div>
+              <div>
+                <label
                   htmlFor="checkout-note"
                   className="text-xs font-semibold uppercase tracking-[0.2em] text-gold"
                 >
-                  Delivery note
+                  Collector note
                 </label>
                 <textarea
                   id="checkout-note"
                   name="note"
                   rows={4}
                   className="mt-2 w-full resize-none border border-gallery-white/25 bg-transparent px-4 py-3 text-sm outline-none transition-colors focus:border-gold"
-                  placeholder="City, preferred delivery timing, or custom request"
+                  placeholder="Preferred delivery timing, room context, custom request, or question"
                 />
               </div>
               <button
@@ -247,7 +356,7 @@ export function CheckoutClient() {
                 <p className="rounded-card border border-gold/35 bg-gold/10 px-4 py-3 text-sm leading-6 text-gallery-white">
                   Your selection has been saved. Request reference:{" "}
                   <span className="font-semibold">{submitState.requestId.slice(0, 8)}</span>.
-                  We will connect Paystack payment after the checkout flow is approved.
+                  We will confirm delivery and payment details before Paystack payment.
                 </p>
               ) : null}
               {submitState.status === "error" ? (

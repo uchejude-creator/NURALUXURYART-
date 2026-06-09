@@ -6,11 +6,19 @@ export const siteConfig = {
   tagline: "Hand-painted in Turkey, curated for the world.",
   locale: "en",
   currency: "NGN",
+  contact: {
+    email: "hello@nuraluxuryart.com",
+    phone: "+234 000 000 0000",
+    phoneHref: "tel:+2340000000000",
+    whatsappHref: "https://wa.me/2340000000000",
+    location: "Lagos, Nigeria",
+    responseTime: "Collector enquiries are usually answered within one business day.",
+  },
   nav: [
     { label: "Shop", href: "/#featured-artworks" },
     { label: "Gallery", href: "/#curated-collections" },
     { label: "Our Story", href: "/#our-story" },
-    { label: "Contact", href: "/#contact" },
+    { label: "Contact", href: "/contact" },
   ],
   footerGroups: [
     {
@@ -19,7 +27,7 @@ export const siteConfig = {
         { label: "About NURALUXURYART", href: "/#our-story" },
         { label: "Our Story", href: "/#our-story" },
         { label: "Custom Orders", href: "/#collector-care" },
-        { label: "Contact", href: "/#contact" },
+        { label: "Contact", href: "/contact" },
       ],
     },
     {
@@ -41,10 +49,10 @@ export const siteConfig = {
     },
   ],
   socialLinks: [
-    { label: "Instagram", href: "#contact" },
-    { label: "Facebook", href: "#contact" },
-    { label: "TikTok", href: "#contact" },
-    { label: "X", href: "#contact" },
-    { label: "WhatsApp", href: "#contact" },
+    { label: "Instagram", href: "/contact" },
+    { label: "Facebook", href: "/contact" },
+    { label: "TikTok", href: "/contact" },
+    { label: "X", href: "/contact" },
+    { label: "WhatsApp", href: "/contact" },
   ],
 } as const;

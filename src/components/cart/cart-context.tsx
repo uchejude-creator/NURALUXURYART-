@@ -41,6 +41,21 @@ type CartContextValue = {
 
 const CartContext = createContext<CartContextValue | null>(null);
 
+function getStoredCartItems(): CartItem[] {
+  if (typeof window === "undefined") {
+    return [];
+  }
+
+  try {
+    const storedCart = window.localStorage.getItem(CART_STORAGE_KEY);
+    const parsedCart = storedCart ? (JSON.parse(storedCart) as unknown) : [];
+
+    return Array.isArray(parsedCart) ? (parsedCart as CartItem[]) : [];
+  } catch {
+    return [];
+  }
+}
+
 function artworkToCartItem(artwork: Artwork): CartItem {
   return {
     id: artwork.id,
@@ -55,23 +70,8 @@ function artworkToCartItem(artwork: Artwork): CartItem {
 }
 
 export function CartProvider({ children }: { children: ReactNode }) {
-  const [items, setItems] = useState<CartItem[]>([]);
+  const [items, setItems] = useState<CartItem[]>(getStoredCartItems);
   const [isCartOpen, setIsCartOpen] = useState(false);
-
-  useEffect(() => {
-    const timeoutId = window.setTimeout(() => {
-      try {
-        const storedCart = window.localStorage.getItem(CART_STORAGE_KEY);
-        if (storedCart) {
-          setItems(JSON.parse(storedCart) as CartItem[]);
-        }
-      } catch {
-        setItems([]);
-      }
-    }, 0);
-
-    return () => window.clearTimeout(timeoutId);
-  }, []);
 
   useEffect(() => {
     window.localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(items));

@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 
 import { Reveal } from "@/components/motion/reveal";
+import { routes } from "@/lib/routes";
 
 const storyHighlights = [
   "Hand-painted in Turkey",
@@ -46,7 +47,7 @@ export function StorySection() {
           </ul>
 
           <Link
-            href="/#contact"
+            href={routes.contact}
             className="mt-10 inline-flex items-center gap-3 text-xs font-semibold uppercase tracking-[0.22em] text-gold transition-colors hover:text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-gold"
           >
             Speak with us

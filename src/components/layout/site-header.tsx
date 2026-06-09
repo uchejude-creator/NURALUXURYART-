@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from "react";
 
 import { siteConfig } from "@/config/site";
 import { useCart } from "@/components/cart/cart-context";
+import { routes } from "@/lib/routes";
 
 function BrandWordmark({ onClick }: { onClick?: () => void }) {
   return (
@@ -84,10 +85,35 @@ export function SiteHeader() {
         </nav>
 
         <div className="flex items-center gap-2 sm:gap-4">
+          <Link
+            href={routes.checkout}
+            className="relative flex h-10 w-10 items-center justify-center rounded-full text-gallery-white transition-colors hover:text-gold focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-gold md:hidden"
+            aria-label={`Review cart with ${itemCount} selected artwork${itemCount === 1 ? "" : "s"}`}
+          >
+            <svg
+              aria-hidden="true"
+              viewBox="0 0 24 24"
+              className="h-5 w-5"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.8"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M6.5 8.5h11l-.7 10.2a2 2 0 0 1-2 1.8H9.2a2 2 0 0 1-2-1.8L6.5 8.5Z" />
+              <path d="M9 8.5a3 3 0 0 1 6 0" />
+            </svg>
+            {itemCount > 0 ? (
+              <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-gold px-1 text-[0.62rem] font-bold text-ink">
+                {itemCount}
+              </span>
+            ) : null}
+          </Link>
+
           <button
             type="button"
             onClick={openCart}
-            className="relative flex h-10 w-10 items-center justify-center rounded-full text-gallery-white transition-colors hover:text-gold focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-gold"
+            className="relative hidden h-10 w-10 items-center justify-center rounded-full text-gallery-white transition-colors hover:text-gold focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-gold md:flex"
             aria-label={`Open shopping cart with ${itemCount} selected artwork${itemCount === 1 ? "" : "s"}`}
           >
             <svg

@@ -58,7 +58,7 @@ export function SignaturePiece({ artwork }: SignaturePieceProps) {
               View Signature Piece
             </Link>
             <Link
-              href="/#contact"
+              href={routes.contact}
               className="inline-flex min-h-14 items-center justify-center rounded-full border border-gallery-white/25 px-8 text-xs font-semibold uppercase tracking-[0.22em] text-gallery-white transition-colors hover:border-gold hover:text-gold focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-gold"
             >
               Request Custom Order
