@@ -1,5 +1,4 @@
-import { collections } from "@/data/collections";
-import { featuredArtworks, signatureArtwork } from "@/data/featured-artworks";
+import type { Artwork, ArtworkCollection } from "@/types/artwork";
 
 import { ArtworkCard } from "../artwork/artwork-card";
 import { CollectionCard } from "../artwork/collection-card";
@@ -8,7 +7,13 @@ import { SectionShell } from "./section-shell";
 import { SignaturePiece } from "./signature-piece";
 import { StorySection } from "./story-section";
 
-export function HomePage() {
+type HomePageProps = {
+  collections: ArtworkCollection[];
+  featuredArtworks: Artwork[];
+  signatureArtwork: Artwork;
+};
+
+export function HomePage({ collections, featuredArtworks, signatureArtwork }: HomePageProps) {
   return (
     <main>
       <HeroSection />

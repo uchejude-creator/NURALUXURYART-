@@ -12,14 +12,21 @@ export type Artwork = {
   availability: ArtworkAvailability;
   imageSrc: string;
   imageAlt: string;
+  materials?: string | null;
+  dimensions?: string | null;
+  origin?: string | null;
+  framing?: string | null;
+  careNotes?: string | null;
   featured?: boolean;
   signature?: boolean;
 };
 
 export type ArtworkCollection = {
+  id?: string;
   title: string;
   slug: string;
   description: string;
   imageSrc: string;
   imageAlt: string;
+  sortOrder?: number;
 };

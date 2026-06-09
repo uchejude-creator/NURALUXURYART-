@@ -1,12 +1,16 @@
 import { CollectionCard } from "@/components/artwork/collection-card";
-import { collections } from "@/data/collections";
+import { getCollections } from "@/lib/catalog";
 
 export const metadata = {
   title: "Collections",
   description: "Explore NURALUXURYART hand-painted artwork collections.",
 };
 
-export default function CollectionsPage() {
+export const revalidate = 60;
+
+export default async function CollectionsPage() {
+  const collections = await getCollections();
+
   return (
     <main className="min-h-screen bg-cream px-6 pb-20 pt-32 text-ink lg:px-10 lg:pt-40">
       <div className="mx-auto max-w-site">

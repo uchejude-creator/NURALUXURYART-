@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { NewsletterForm } from "@/components/layout/newsletter-form";
 import { siteConfig } from "@/config/site";
 import { routes } from "@/lib/routes";
 
@@ -34,24 +35,7 @@ export function SiteFooter() {
             Receive new artwork releases, collector notes, and private gallery updates
             from {siteConfig.name}.
           </p>
-          <form className="mt-8 flex flex-col gap-3 sm:flex-row">
-            <label htmlFor="newsletter-email" className="sr-only">
-              Email address
-            </label>
-            <input
-              id="newsletter-email"
-              name="email"
-              type="email"
-              placeholder="Email address"
-              className="min-h-12 flex-1 border border-gallery-white/30 bg-transparent px-4 text-sm text-gallery-white outline-none transition-colors placeholder:text-gallery-white/35 focus:border-gold"
-            />
-            <button
-              type="submit"
-              className="min-h-12 bg-gold px-8 text-xs font-semibold uppercase tracking-[0.22em] text-ink transition-colors hover:bg-gallery-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-gold"
-            >
-              Subscribe
-            </button>
-          </form>
+          <NewsletterForm />
           <div className="mt-8 flex flex-wrap gap-4 text-xs uppercase tracking-[0.24em] text-gallery-white/60">
             {siteConfig.socialLinks.map((link) => (
               <Link key={link.label} href={link.href} className="hover:text-gold">

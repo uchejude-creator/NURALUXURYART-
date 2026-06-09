@@ -1,20 +1,25 @@
 import { notFound } from "next/navigation";
 
 import { ArtworkCard } from "@/components/artwork/artwork-card";
-import { collections } from "@/data/collections";
-import { featuredArtworks } from "@/data/featured-artworks";
+import {
+  getArtworksByCollectionSlug,
+  getCollectionBySlug,
+  getFallbackCollectionSlugs,
+} from "@/lib/catalog";
 
 type CollectionPageProps = {
   params: Promise<{ slug: string }>;
 };
 
+export const revalidate = 60;
+
 export function generateStaticParams() {
-  return collections.map((collection) => ({ slug: collection.slug }));
+  return getFallbackCollectionSlugs();
 }
 
 export async function generateMetadata({ params }: CollectionPageProps) {
   const { slug } = await params;
-  const collection = collections.find((item) => item.slug === slug);
+  const collection = await getCollectionBySlug(slug);
 
   if (!collection) {
     return {};
@@ -28,13 +33,13 @@ export async function generateMetadata({ params }: CollectionPageProps) {
 
 export default async function CollectionPage({ params }: CollectionPageProps) {
   const { slug } = await params;
-  const collection = collections.find((item) => item.slug === slug);
+  const collection = await getCollectionBySlug(slug);
 
   if (!collection) {
     notFound();
   }
 
-  const artworks = featuredArtworks.filter((artwork) => artwork.collectionSlug === slug);
+  const artworks = await getArtworksByCollectionSlug(slug);
 
   return (
     <main className="min-h-screen bg-cream px-6 pb-20 pt-32 text-ink lg:px-10 lg:pt-40">
@@ -50,9 +55,13 @@ export default async function CollectionPage({ params }: CollectionPageProps) {
         </p>
 
         <div className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-          {artworks.map((artwork) => (
-            <ArtworkCard key={artwork.id} artwork={artwork} />
-          ))}
+          {artworks.length ? (
+            artworks.map((artwork) => <ArtworkCard key={artwork.id} artwork={artwork} />)
+          ) : (
+            <p className="rounded-card border border-ink/10 bg-gallery-white p-8 text-stone">
+              This collection is being prepared. Speak with us for available pieces.
+            </p>
+          )}
         </div>
       </div>
     </main>

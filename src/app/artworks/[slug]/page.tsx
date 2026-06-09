@@ -3,23 +3,23 @@ import Image from "next/image";
 import Link from "next/link";
 
 import { AddToCartButton } from "@/components/cart/add-to-cart-button";
-import { featuredArtworks, signatureArtwork } from "@/data/featured-artworks";
+import { getArtworkBySlug, getFallbackArtworkSlugs } from "@/lib/catalog";
 import { formatCurrency } from "@/lib/format";
 import { routes } from "@/lib/routes";
-
-const artworks = [...featuredArtworks, signatureArtwork];
 
 type ArtworkPageProps = {
   params: Promise<{ slug: string }>;
 };
 
+export const revalidate = 60;
+
 export function generateStaticParams() {
-  return artworks.map((artwork) => ({ slug: artwork.slug }));
+  return getFallbackArtworkSlugs();
 }
 
 export async function generateMetadata({ params }: ArtworkPageProps) {
   const { slug } = await params;
-  const artwork = artworks.find((item) => item.slug === slug);
+  const artwork = await getArtworkBySlug(slug);
 
   if (!artwork) {
     return {};
@@ -33,7 +33,7 @@ export async function generateMetadata({ params }: ArtworkPageProps) {
 
 export default async function ArtworkPage({ params }: ArtworkPageProps) {
   const { slug } = await params;
-  const artwork = artworks.find((item) => item.slug === slug);
+  const artwork = await getArtworkBySlug(slug);
 
   if (!artwork) {
     notFound();
@@ -63,6 +63,40 @@ export default async function ArtworkPage({ params }: ArtworkPageProps) {
           <p className="mt-6 max-w-2xl text-base leading-8 text-stone">
             {artwork.description}
           </p>
+          <dl className="mt-8 grid gap-4 border-y border-ink/10 py-6 text-sm text-stone sm:grid-cols-2">
+            {artwork.materials ? (
+              <div>
+                <dt className="text-[0.68rem] font-semibold uppercase tracking-[0.24em] text-gold">
+                  Materials
+                </dt>
+                <dd className="mt-2">{artwork.materials}</dd>
+              </div>
+            ) : null}
+            {artwork.dimensions ? (
+              <div>
+                <dt className="text-[0.68rem] font-semibold uppercase tracking-[0.24em] text-gold">
+                  Dimensions
+                </dt>
+                <dd className="mt-2">{artwork.dimensions}</dd>
+              </div>
+            ) : null}
+            {artwork.origin ? (
+              <div>
+                <dt className="text-[0.68rem] font-semibold uppercase tracking-[0.24em] text-gold">
+                  Origin
+                </dt>
+                <dd className="mt-2">{artwork.origin}</dd>
+              </div>
+            ) : null}
+            {artwork.framing ? (
+              <div>
+                <dt className="text-[0.68rem] font-semibold uppercase tracking-[0.24em] text-gold">
+                  Framing
+                </dt>
+                <dd className="mt-2">{artwork.framing}</dd>
+              </div>
+            ) : null}
+          </dl>
           {artwork.price ? (
             <p className="mt-4 text-2xl font-semibold">{formatCurrency(artwork.price)}</p>
           ) : (
