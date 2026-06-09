@@ -144,29 +144,37 @@ export default function ContactPage() {
           </div>
 
           <div className="mt-14 grid gap-5 lg:grid-cols-3">
-            {supportCards.map((card) => (
-              <Link
-                key={card.title}
-                href={card.href}
-                className="group flex min-h-72 flex-col justify-between rounded-card border border-ink/10 bg-gallery-white p-7 shadow-[0_24px_70px_rgba(13,13,13,0.05)] transition-[border-color,transform,box-shadow] duration-300 hover:-translate-y-1 hover:border-gold hover:shadow-[0_32px_90px_rgba(13,13,13,0.08)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-gold"
-              >
-                <div>
-                  <div className="flex items-center justify-between gap-4">
-                    <p className="text-xs font-semibold uppercase tracking-[0.28em] text-gold">
-                      {card.eyebrow}
-                    </p>
-                    <span className="flex h-12 w-12 items-center justify-center rounded-full bg-gold/12 text-gold transition-colors group-hover:bg-gold group-hover:text-ink">
-                      <SupportIcon icon={card.icon} />
-                    </span>
+            {supportCards.map((card) => {
+              const isExternal = card.href.startsWith("http");
+
+              return (
+                <Link
+                  key={card.title}
+                  href={card.href}
+                  className="group flex min-h-72 flex-col justify-between rounded-card border border-ink/10 bg-gallery-white p-7 shadow-[0_24px_70px_rgba(13,13,13,0.05)] transition-[border-color,transform,box-shadow] duration-300 hover:-translate-y-1 hover:border-gold hover:shadow-[0_32px_90px_rgba(13,13,13,0.08)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-gold"
+                  target={isExternal ? "_blank" : undefined}
+                  rel={isExternal ? "noreferrer" : undefined}
+                >
+                  <div>
+                    <div className="flex items-center justify-between gap-4">
+                      <p className="text-xs font-semibold uppercase tracking-[0.28em] text-gold">
+                        {card.eyebrow}
+                      </p>
+                      <span className="flex h-12 w-12 items-center justify-center rounded-full bg-gold/12 text-gold transition-colors group-hover:bg-gold group-hover:text-ink">
+                        <SupportIcon icon={card.icon} />
+                      </span>
+                    </div>
+                    <h2 className="mt-8 font-serif text-4xl leading-none">
+                      {card.title}
+                    </h2>
+                    <p className="mt-5 text-sm leading-7 text-stone">{card.body}</p>
                   </div>
-                  <h2 className="mt-8 font-serif text-4xl leading-none">{card.title}</h2>
-                  <p className="mt-5 text-sm leading-7 text-stone">{card.body}</p>
-                </div>
-                <span className="mt-8 inline-flex text-xs font-semibold uppercase tracking-[0.22em] text-ink transition-colors group-hover:text-gold">
-                  {card.cta}
-                </span>
-              </Link>
-            ))}
+                  <span className="mt-8 inline-flex text-xs font-semibold uppercase tracking-[0.22em] text-ink transition-colors group-hover:text-gold">
+                    {card.cta}
+                  </span>
+                </Link>
+              );
+            })}
           </div>
         </div>
       </section>

@@ -7,10 +7,10 @@ export const siteConfig = {
   locale: "en",
   currency: "NGN",
   contact: {
-    email: "hello@nuraluxuryart.com",
-    phone: "+234 000 000 0000",
-    phoneHref: "tel:+2340000000000",
-    whatsappHref: "https://wa.me/2340000000000",
+    email: "nuraluxuryng@gmail.com",
+    phone: "+234 706 941 1946",
+    phoneHref: "tel:+2347069411946",
+    whatsappHref: "https://wa.me/2347069411946",
     location: "Lagos, Nigeria",
     responseTime: "Collector enquiries are usually answered within one business day.",
   },
@@ -49,10 +49,8 @@ export const siteConfig = {
     },
   ],
   socialLinks: [
-    { label: "Instagram", href: "/contact" },
-    { label: "Facebook", href: "/contact" },
-    { label: "TikTok", href: "/contact" },
-    { label: "X", href: "/contact" },
-    { label: "WhatsApp", href: "/contact" },
+    { label: "Instagram", href: "https://www.instagram.com/nuraluxury_ng?igsh=N2w4ZXRpZW8zOXdo" },
+    { label: "TikTok", href: "https://www.tiktok.com/@nuraluxuryart?_r=1&_t=ZS-974Y8NtS31Q" },
+    { label: "WhatsApp", href: "https://wa.me/2347069411946" },
   ],
 } as const;

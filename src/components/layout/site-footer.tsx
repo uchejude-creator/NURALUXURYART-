@@ -37,11 +37,21 @@ export function SiteFooter() {
           </p>
           <NewsletterForm />
           <div className="mt-8 flex flex-wrap gap-4 text-xs uppercase tracking-[0.24em] text-gallery-white/60">
-            {siteConfig.socialLinks.map((link) => (
-              <Link key={link.label} href={link.href} className="hover:text-gold">
-                {link.label}
-              </Link>
-            ))}
+            {siteConfig.socialLinks.map((link) => {
+              const isExternal = link.href.startsWith("http");
+
+              return (
+                <Link
+                  key={link.label}
+                  href={link.href}
+                  className="hover:text-gold"
+                  target={isExternal ? "_blank" : undefined}
+                  rel={isExternal ? "noreferrer" : undefined}
+                >
+                  {link.label}
+                </Link>
+              );
+            })}
           </div>
         </section>
       </div>
