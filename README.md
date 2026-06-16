@@ -55,6 +55,10 @@ The app sends `RedirectTo` as `/auth/confirm?next=/admin`, so the email opens a
 confirmation page first. The token is only used after the admin clicks the
 button on that page.
 
+The app also includes a homepage fallback for Supabase links that land on `/`
+with auth query or hash parameters. If Supabase falls back to the Site URL, the
+client redirects the session into `/admin`.
+
 In Supabase Auth URL Configuration, allow:
 
 ```text

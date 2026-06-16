@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Cormorant_Garamond, Geist, Geist_Mono } from "next/font/google";
+import { AdminAuthLinkRedirect } from "@/components/auth/admin-auth-link-redirect";
 import { CartDrawer } from "@/components/cart/cart-drawer";
 import { CartProvider } from "@/components/cart/cart-context";
 import { SiteFooter } from "@/components/layout/site-footer";
@@ -54,6 +55,7 @@ export default function RootLayout({
     >
       <body className="min-h-full flex flex-col">
         <CartProvider>
+          <AdminAuthLinkRedirect />
           <ScrollRestoration />
           <SiteHeader />
           {children}
