@@ -41,7 +41,7 @@ NEXT_PUBLIC_SITE_URL=https://nuraluxuryart.vercel.app
 Use the custom domain once Vercel DNS is connected:
 
 ```powershell
-NEXT_PUBLIC_SITE_URL=https://nuraluxyart.com
+NEXT_PUBLIC_SITE_URL=https://nuraluxuryart.com
 ```
 
 For safer email links, set the Supabase Magic Link email template URL to:
@@ -58,7 +58,7 @@ In Supabase Auth URL Configuration, allow:
 
 ```text
 http://localhost:3000/**
-https://nuraluxyart.com/**
+https://nuraluxuryart.com/**
 https://nuraluxuryart.vercel.app/**
 ```
 
