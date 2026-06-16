@@ -5,6 +5,7 @@ import { CartProvider } from "@/components/cart/cart-context";
 import { SiteFooter } from "@/components/layout/site-footer";
 import { SiteHeader } from "@/components/layout/site-header";
 import { ScrollRestoration } from "@/components/motion/scroll-restoration";
+import { siteConfig } from "@/config/site";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -24,7 +25,7 @@ const cormorant = Cormorant_Garamond({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://nuraluxuryart.vercel.app"),
+  metadataBase: new URL(siteConfig.url),
   title: {
     default: "NURALUXURYART | Luxury Hand-Painted Art",
     template: "%s | NURALUXURYART",

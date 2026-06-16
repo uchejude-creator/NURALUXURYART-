@@ -24,6 +24,13 @@ const CHECKOUT_STATUSES = new Set([
 
 const MESSAGE_STATUSES = new Set(["new", "reviewed", "replied", "closed"]);
 const AVAILABILITY = new Set(["available", "on-request", "reserved", "sold"]);
+const ARTWORK_IMAGE_BUCKET = "artwork-media";
+const MAX_IMAGE_SIZE = 10 * 1024 * 1024;
+const IMAGE_EXTENSIONS: Record<string, string> = {
+  "image/jpeg": "jpg",
+  "image/png": "png",
+  "image/webp": "webp",
+};
 
 function cleanText(value: FormDataEntryValue | null, maxLength: number) {
   return typeof value === "string" ? value.trim().slice(0, maxLength) : "";
@@ -44,6 +51,14 @@ function cleanPrice(value: FormDataEntryValue | null) {
   return Number.isFinite(parsed) && parsed >= 0 ? parsed : null;
 }
 
+function getImageFile(value: FormDataEntryValue | null) {
+  if (typeof File === "undefined" || !(value instanceof File) || value.size === 0) {
+    return null;
+  }
+
+  return value;
+}
+
 function slugify(value: string) {
   return value
     .toLowerCase()
@@ -58,6 +73,70 @@ function refreshStorefront() {
   revalidatePath("/collections");
   revalidatePath("/artworks/[slug]", "page");
   revalidatePath("/collections/[slug]", "page");
+}
+
+function stripTrailingSlash(value: string) {
+  return value.replace(/\/+$/, "");
+}
+
+function getAdminRedirectOrigin(requestOrigin: string | null) {
+  const configuredUrl = process.env.NEXT_PUBLIC_SITE_URL ?? process.env.SITE_URL;
+
+  return stripTrailingSlash(requestOrigin || configuredUrl || siteConfig.url);
+}
+
+async function uploadArtworkImage({
+  file,
+  slug,
+  supabase,
+}: {
+  file: File;
+  slug: string;
+  supabase: Awaited<ReturnType<typeof createClient>>;
+}) {
+  const extension = IMAGE_EXTENSIONS[file.type];
+
+  if (!extension) {
+    throw new Error("Upload a JPG, PNG, or WebP artwork image.");
+  }
+
+  if (file.size > MAX_IMAGE_SIZE) {
+    throw new Error("Artwork images must be 10 MB or smaller.");
+  }
+
+  const imageBuffer = Buffer.from(await file.arrayBuffer());
+  const objectPath = `artworks/${slug}-${Date.now()}.${extension}`;
+  const { error } = await supabase.storage.from(ARTWORK_IMAGE_BUCKET).upload(objectPath, imageBuffer, {
+    cacheControl: "31536000",
+    contentType: file.type,
+    upsert: false,
+  });
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return supabase.storage.from(ARTWORK_IMAGE_BUCKET).getPublicUrl(objectPath).data.publicUrl;
+}
+
+async function resolveArtworkImage({
+  fallback,
+  formData,
+  slug,
+  supabase,
+}: {
+  fallback: string;
+  formData: FormData;
+  slug: string;
+  supabase: Awaited<ReturnType<typeof createClient>>;
+}) {
+  const imageFile = getImageFile(formData.get("imageUpload"));
+
+  if (imageFile) {
+    return uploadArtworkImage({ file: imageFile, slug, supabase });
+  }
+
+  return cleanText(formData.get("imageSrc"), 1000) || fallback;
 }
 
 export async function sendAdminLoginLink(
@@ -75,20 +154,34 @@ export async function sendAdminLoginLink(
 
   const supabase = await createClient();
   const requestHeaders = await headers();
-  const origin = requestHeaders.get("origin") ?? siteConfig.url;
+  const redirectOrigin = getAdminRedirectOrigin(requestHeaders.get("origin"));
+
+  const { data: isAdminEmail, error: adminError } = await supabase.rpc("is_active_admin_email", {
+    candidate_email: email,
+  });
+
+  if (adminError || !isAdminEmail) {
+    return {
+      status: "error",
+      message: "This email is not on the active admin allowlist.",
+    };
+  }
 
   const { error } = await supabase.auth.signInWithOtp({
     email,
     options: {
-      emailRedirectTo: `${origin}/auth/callback?next=/admin`,
-      shouldCreateUser: true,
+      emailRedirectTo: `${redirectOrigin}/auth/confirm?next=/admin`,
+      shouldCreateUser: false,
     },
   });
 
   if (error) {
     return {
       status: "error",
-      message: error.message,
+      message:
+        error.message === "Signups not allowed for otp"
+          ? "This admin email exists in the allowlist but still needs a Supabase Auth user."
+          : error.message,
     };
   }
 
@@ -116,6 +209,20 @@ export async function createArtworkAction(formData: FormData) {
     redirect("/admin/artworks?error=missing-artwork-fields");
   }
 
+  let imageSrc: string;
+
+  try {
+    imageSrc = await resolveArtworkImage({
+      fallback: "https://xuhwuwdsamnisvxezobh.supabase.co/storage/v1/object/public/artwork-media/artworks/crowned-silence.jpg",
+      formData,
+      slug,
+      supabase,
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Image upload failed.";
+    redirect(`/admin/artworks?error=${encodeURIComponent(message)}`);
+  }
+
   const { error } = await supabase.from("artworks").insert({
     legacy_id: slug,
     title,
@@ -128,7 +235,7 @@ export async function createArtworkAction(formData: FormData) {
     price: cleanPrice(formData.get("price")),
     currency: "NGN",
     availability,
-    image_src: cleanText(formData.get("imageSrc"), 500) || "/images/artworks/crowned-silence.jpg",
+    image_src: imageSrc,
     image_alt:
       cleanText(formData.get("imageAlt"), 500) ||
       `Hand-painted artwork titled ${title} from NURALUXURYART`,
@@ -163,6 +270,20 @@ export async function updateArtworkAction(formData: FormData) {
     redirect("/admin/artworks?error=missing-artwork-fields");
   }
 
+  let imageSrc: string;
+
+  try {
+    imageSrc = await resolveArtworkImage({
+      fallback: cleanText(formData.get("currentImageSrc"), 1000),
+      formData,
+      slug,
+      supabase,
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Image upload failed.";
+    redirect(`/admin/artworks?error=${encodeURIComponent(message)}`);
+  }
+
   const { error } = await supabase
     .from("artworks")
     .update({
@@ -174,7 +295,7 @@ export async function updateArtworkAction(formData: FormData) {
       description: cleanText(formData.get("description"), 1200),
       price: cleanPrice(formData.get("price")),
       availability,
-      image_src: cleanText(formData.get("imageSrc"), 500),
+      image_src: imageSrc,
       image_alt: cleanText(formData.get("imageAlt"), 500),
       materials: cleanOptionalText(formData.get("materials"), 500),
       dimensions: cleanOptionalText(formData.get("dimensions"), 120),

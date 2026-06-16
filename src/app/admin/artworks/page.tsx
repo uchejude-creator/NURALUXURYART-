@@ -38,6 +38,55 @@ type AdminArtwork = {
 
 const availabilityOptions = ["available", "on-request", "reserved", "sold"];
 
+type AdminArtworksPageProps = {
+  searchParams?: Promise<{
+    error?: string;
+    updated?: string;
+  }>;
+};
+
+function formatStatus(value: string) {
+  return value.replaceAll("-", " ");
+}
+
+function getAvailabilityClasses(value: string) {
+  if (value === "sold") {
+    return "border-gallery-white/15 bg-gallery-white/10 text-gallery-white/60";
+  }
+
+  if (value === "reserved" || value === "on-request") {
+    return "border-gold/30 bg-gold/10 text-gold";
+  }
+
+  return "border-emerald-300/25 bg-emerald-500/10 text-emerald-100";
+}
+
+function PageNotice({ error, updated }: { error?: string; updated?: string }) {
+  if (!error && !updated) {
+    return null;
+  }
+
+  const isError = Boolean(error);
+  const message = error
+    ? error
+    : updated === "created"
+      ? "Artwork created and storefront refreshed."
+      : "Artwork saved and storefront refreshed.";
+
+  return (
+    <div
+      className={`mb-6 rounded-card border px-5 py-4 text-sm leading-6 ${
+        isError
+          ? "border-red-300/35 bg-red-950/30 text-gallery-white"
+          : "border-gold/35 bg-gold/10 text-gallery-white"
+      }`}
+      role="status"
+    >
+      {message}
+    </div>
+  );
+}
+
 function Field({
   defaultValue,
   label,
@@ -85,6 +134,23 @@ function TextArea({
         defaultValue={defaultValue ?? ""}
         className="mt-2 w-full resize-none rounded-card border border-gallery-white/15 bg-ink px-3 py-3 text-sm normal-case leading-6 tracking-normal text-gallery-white outline-none transition-colors placeholder:text-gallery-white/25 focus:border-gold"
       />
+    </label>
+  );
+}
+
+function ImageUploadField() {
+  return (
+    <label className="block text-xs font-semibold uppercase tracking-[0.2em] text-gallery-white/60">
+      Upload new image
+      <input
+        name="imageUpload"
+        type="file"
+        accept="image/jpeg,image/png,image/webp"
+        className="mt-2 w-full rounded-card border border-dashed border-gallery-white/20 bg-ink px-3 py-3 text-sm normal-case tracking-normal text-gallery-white file:mr-4 file:rounded-full file:border-0 file:bg-gold file:px-4 file:py-2 file:text-xs file:font-semibold file:uppercase file:tracking-[0.16em] file:text-ink hover:file:bg-gallery-white"
+      />
+      <span className="mt-2 block text-[0.65rem] font-normal normal-case leading-5 tracking-normal text-gallery-white/45">
+        JPG, PNG, or WebP. Uploading a file replaces the image URL.
+      </span>
     </label>
   );
 }
@@ -165,26 +231,52 @@ function ArtworkForm({
   return (
     <form
       action={updateArtworkAction}
-      className="grid gap-5 rounded-card border border-gallery-white/10 bg-gallery-white/[0.04] p-5 lg:grid-cols-[14rem_1fr]"
+      encType="multipart/form-data"
+      className="grid gap-6 rounded-card border border-gallery-white/10 bg-gallery-white/[0.04] p-5 shadow-[0_30px_90px_rgba(0,0,0,0.16)] lg:grid-cols-[16rem_1fr] lg:p-6"
     >
       <input type="hidden" name="id" value={artwork.id} />
+      <input type="hidden" name="currentImageSrc" value={artwork.image_src} />
       <div>
         <div className="relative aspect-[4/5] overflow-hidden rounded-card bg-ink">
           <Image
             src={artwork.image_src}
             alt={artwork.image_alt}
             fill
-            sizes="14rem"
+            sizes="16rem"
             className="object-cover"
           />
         </div>
-        <p className="mt-4 text-sm font-semibold text-gallery-white">
-          {artwork.price ? formatCurrency(artwork.price) : "Available on request"}
-        </p>
-        <p className="mt-1 text-xs uppercase tracking-[0.2em] text-gold">{artwork.availability}</p>
+        <div className="mt-4 space-y-3">
+          <span
+            className={`inline-flex rounded-full border px-3 py-2 text-[0.65rem] font-semibold uppercase tracking-[0.18em] ${getAvailabilityClasses(
+              artwork.availability,
+            )}`}
+          >
+            {formatStatus(artwork.availability)}
+          </span>
+          <p className="text-sm font-semibold text-gallery-white">
+            {artwork.price ? formatCurrency(artwork.price) : "Available on request"}
+          </p>
+          <p className="break-all text-xs leading-5 text-gallery-white/35">{artwork.slug}</p>
+        </div>
       </div>
 
       <div className="grid gap-4">
+        <div className="flex flex-col gap-4 border-b border-gallery-white/10 pb-4 lg:flex-row lg:items-start lg:justify-between">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-gold">
+              Artwork record
+            </p>
+            <h3 className="mt-2 font-serif text-4xl leading-none">{artwork.title}</h3>
+          </div>
+          <button
+            type="submit"
+            className="min-h-11 rounded-full bg-gold px-7 text-xs font-semibold uppercase tracking-[0.2em] text-ink transition-colors hover:bg-gallery-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-gold"
+          >
+            Save artwork
+          </button>
+        </div>
+
         <div className="grid gap-4 md:grid-cols-2">
           <Field name="title" label="Title" defaultValue={artwork.title} required />
           <Field name="slug" label="Slug" defaultValue={artwork.slug} required />
@@ -197,7 +289,8 @@ function ArtworkForm({
         </div>
         <TextArea name="description" label="Description" defaultValue={artwork.description} rows={3} />
         <div className="grid gap-4 md:grid-cols-2">
-          <Field name="imageSrc" label="Image path" defaultValue={artwork.image_src} required />
+          <Field name="imageSrc" label="Image URL" defaultValue={artwork.image_src} />
+          <ImageUploadField />
           <Field name="imageAlt" label="Image alt text" defaultValue={artwork.image_alt} required />
           <Field name="materials" label="Materials" defaultValue={artwork.materials} />
           <Field name="dimensions" label="Dimensions" defaultValue={artwork.dimensions} />
@@ -210,19 +303,14 @@ function ArtworkForm({
           <Checkbox name="isSignature" label="Signature" defaultChecked={artwork.is_signature} />
           <Checkbox name="isPublished" label="Published" defaultChecked={artwork.is_published} />
         </div>
-        <button
-          type="submit"
-          className="min-h-12 rounded-full bg-gold px-8 text-xs font-semibold uppercase tracking-[0.22em] text-ink transition-colors hover:bg-gallery-white"
-        >
-          Save artwork
-        </button>
       </div>
     </form>
   );
 }
 
-export default async function AdminArtworksPage() {
+export default async function AdminArtworksPage({ searchParams }: AdminArtworksPageProps) {
   const { email, supabase } = await requireAdmin();
+  const params = await searchParams;
   const [{ data: collectionsData }, { data: artworksData }] = await Promise.all([
     supabase
       .from("artwork_collections")
@@ -239,22 +327,61 @@ export default async function AdminArtworksPage() {
 
   const collections = (collectionsData ?? []) as AdminCollection[];
   const artworks = (artworksData ?? []) as AdminArtwork[];
+  const publishedCount = artworks.filter((artwork) => artwork.is_published).length;
+  const signatureCount = artworks.filter((artwork) => artwork.is_signature).length;
 
   return (
     <main className="min-h-screen bg-ink px-6 pb-20 pt-32 text-gallery-white lg:px-10 lg:pt-40">
       <section className="mx-auto max-w-site">
         <AdminNav email={email} />
 
-        <section className="rounded-card border border-gallery-white/10 bg-gallery-white/[0.04] p-5">
-          <h2 className="font-serif text-4xl">Add New Artwork</h2>
-          <form action={createArtworkAction} className="mt-6 grid gap-4 lg:grid-cols-2">
+        <PageNotice error={params?.error} updated={params?.updated} />
+
+        <section className="mb-8 grid gap-4 md:grid-cols-3">
+          {[
+            ["Total artworks", artworks.length],
+            ["Published", publishedCount],
+            ["Signature", signatureCount],
+          ].map(([label, value]) => (
+            <div key={label} className="rounded-card border border-gallery-white/10 bg-gallery-white/[0.04] p-5">
+              <p className="text-xs font-semibold uppercase tracking-[0.22em] text-gold">
+                {label}
+              </p>
+              <p className="mt-4 font-serif text-5xl font-light leading-none">{value}</p>
+            </div>
+          ))}
+        </section>
+
+        <section className="rounded-card border border-gallery-white/10 bg-gallery-white/[0.04] p-5 lg:p-7">
+          <div className="grid gap-4 border-b border-gallery-white/10 pb-6 lg:grid-cols-[1fr_0.8fr]">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.34em] text-gold">
+                Catalog Studio
+              </p>
+              <h2 className="mt-3 font-serif text-4xl font-light sm:text-5xl">Add New Artwork</h2>
+            </div>
+            <p className="text-sm leading-7 text-gallery-white/60 lg:self-end">
+              Upload a new image or paste an existing Supabase image URL. Published artworks appear
+              on the storefront after save.
+            </p>
+          </div>
+          <form
+            action={createArtworkAction}
+            encType="multipart/form-data"
+            className="mt-6 grid gap-4 lg:grid-cols-2"
+          >
             <Field name="title" label="Title" placeholder="New artwork title" required />
             <Field name="slug" label="Slug" placeholder="new-artwork-title" />
             <CollectionSelect collections={collections} />
             <AvailabilitySelect />
             <Field name="medium" label="Medium" placeholder="Hand-painted Turkish artwork" />
             <Field name="price" label="Price (NGN)" placeholder="250000" />
-            <Field name="imageSrc" label="Image path" placeholder="/images/artworks/name.jpg" />
+            <Field
+              name="imageSrc"
+              label="Image URL"
+              placeholder="https://... or upload a file"
+            />
+            <ImageUploadField />
             <Field name="imageAlt" label="Image alt text" placeholder="Describe the artwork" />
             <TextArea name="description" label="Description" rows={3} />
             <TextArea name="careNotes" label="Care notes" rows={3} />
@@ -277,7 +404,17 @@ export default async function AdminArtworksPage() {
           </form>
         </section>
 
-        <div className="mt-8 space-y-5">
+        <div className="mt-8 flex flex-col gap-4 border-b border-gallery-white/10 pb-5 lg:flex-row lg:items-end lg:justify-between">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.34em] text-gold">
+              Current Catalog
+            </p>
+            <h2 className="mt-3 font-serif text-4xl font-light">Edit existing artworks</h2>
+          </div>
+          <p className="text-sm text-gallery-white/50">{artworks.length} record(s)</p>
+        </div>
+
+        <div className="mt-6 space-y-5">
           {artworks.map((artwork) => (
             <ArtworkForm key={artwork.id} artwork={artwork} collections={collections} />
           ))}

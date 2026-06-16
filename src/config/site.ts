@@ -1,6 +1,6 @@
 export const siteConfig = {
   name: "NURALUXURYART",
-  url: "https://nuraluxuryart.vercel.app",
+  url: "https://nuraluxyart.com",
   description:
     "Luxury hand-painted artworks from Turkey, curated for refined interiors, collectors, and gallery-led spaces.",
   tagline: "Hand-painted in Turkey, curated for the world.",

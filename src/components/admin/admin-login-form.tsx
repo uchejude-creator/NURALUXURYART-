@@ -9,8 +9,15 @@ const initialState: AdminLoginState = {
   message: "",
 };
 
-export function AdminLoginForm() {
-  const [state, formAction, pending] = useActionState(sendAdminLoginLink, initialState);
+type AdminLoginFormProps = {
+  initialMessage?: AdminLoginState;
+};
+
+export function AdminLoginForm({ initialMessage }: AdminLoginFormProps) {
+  const [state, formAction, pending] = useActionState(
+    sendAdminLoginLink,
+    initialMessage ?? initialState,
+  );
 
   return (
     <form action={formAction} className="mt-8 space-y-5">
