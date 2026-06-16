@@ -10,6 +10,7 @@ type SubmitState =
 
 export function ContactForm({ topics }: { topics: readonly string[] }) {
   const formRef = useRef<HTMLFormElement>(null);
+  const [openedAt] = useState(() => Date.now());
   const [submitState, setSubmitState] = useState<SubmitState>({ status: "idle" });
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -26,11 +27,13 @@ export function ContactForm({ topics }: { topics: readonly string[] }) {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
+          company: formData.get("company"),
           name: formData.get("name"),
           email: formData.get("email"),
           phone: formData.get("phone"),
           topic: formData.get("topic"),
           message: formData.get("message"),
+          submittedAt: openedAt,
         }),
       });
 
@@ -59,6 +62,14 @@ export function ContactForm({ topics }: { topics: readonly string[] }) {
       onSubmit={handleSubmit}
       className="grid gap-4 rounded-card border border-gallery-white/10 bg-gallery-white/[0.04] p-5 shadow-[0_30px_90px_rgba(0,0,0,0.22)] sm:grid-cols-2 sm:p-7"
     >
+      <input
+        aria-hidden="true"
+        autoComplete="off"
+        className="hidden"
+        name="company"
+        tabIndex={-1}
+        type="text"
+      />
       <div>
         <label
           htmlFor="contact-name"

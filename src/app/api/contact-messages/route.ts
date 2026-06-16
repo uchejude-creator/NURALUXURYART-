@@ -3,11 +3,13 @@ import { NextResponse } from "next/server";
 import { getPublicSupabaseClient } from "@/lib/supabase/public";
 
 type ContactPayload = {
+  company?: unknown;
   name?: unknown;
   email?: unknown;
   phone?: unknown;
   topic?: unknown;
   message?: unknown;
+  submittedAt?: unknown;
 };
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -18,6 +20,16 @@ const TOPICS = new Set([
   "Pricing and checkout",
   "General enquiry",
 ]);
+const SPAM_PHRASES = [
+  "add email capture",
+  "boost your seo",
+  "get you more leads",
+  "improve your product page seo",
+  "lead generation",
+  "more leads",
+  "quick chat",
+  "seo and",
+];
 
 function cleanText(value: unknown, maxLength: number) {
   return typeof value === "string" ? value.trim().slice(0, maxLength) : "";
@@ -25,6 +37,16 @@ function cleanText(value: unknown, maxLength: number) {
 
 function errorResponse(message: string, status = 400) {
   return NextResponse.json({ error: message }, { status });
+}
+
+function successResponse() {
+  return NextResponse.json({ ok: true });
+}
+
+function looksLikeSpam(message: string) {
+  const normalized = message.toLowerCase();
+
+  return SPAM_PHRASES.some((phrase) => normalized.includes(phrase));
 }
 
 export async function POST(request: Request) {
@@ -36,11 +58,17 @@ export async function POST(request: Request) {
     return errorResponse("The message could not be read.");
   }
 
+  const honeypot = cleanText(payload.company, 120);
+  const submittedAt = typeof payload.submittedAt === "number" ? payload.submittedAt : 0;
   const name = cleanText(payload.name, 160);
   const email = cleanText(payload.email, 254).toLowerCase();
   const phone = cleanText(payload.phone, 60);
   const topic = cleanText(payload.topic, 120);
   const message = cleanText(payload.message, 2000);
+
+  if (honeypot || (submittedAt > 0 && Date.now() - submittedAt < 2500)) {
+    return successResponse();
+  }
 
   if (name.length < 2) {
     return errorResponse("Please enter your name.");
@@ -62,6 +90,10 @@ export async function POST(request: Request) {
     return errorResponse("Please share a little more detail.");
   }
 
+  if (looksLikeSpam(`${name} ${email} ${topic} ${message}`)) {
+    return successResponse();
+  }
+
   const { error } = await getPublicSupabaseClient().from("contact_messages").insert({
     customer_name: name,
     customer_email: email,
@@ -77,5 +109,5 @@ export async function POST(request: Request) {
     return errorResponse("We could not save your message. Please try again.", 500);
   }
 
-  return NextResponse.json({ ok: true });
+  return successResponse();
 }
