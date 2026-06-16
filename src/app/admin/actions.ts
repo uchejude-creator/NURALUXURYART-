@@ -156,17 +156,6 @@ export async function sendAdminLoginLink(
   const requestHeaders = await headers();
   const redirectOrigin = getAdminRedirectOrigin(requestHeaders.get("origin"));
 
-  const { data: isAdminEmail, error: adminError } = await supabase.rpc("is_active_admin_email", {
-    candidate_email: email,
-  });
-
-  if (adminError || !isAdminEmail) {
-    return {
-      status: "error",
-      message: "This email is not on the active admin allowlist.",
-    };
-  }
-
   const { error } = await supabase.auth.signInWithOtp({
     email,
     options: {
@@ -177,17 +166,16 @@ export async function sendAdminLoginLink(
 
   if (error) {
     return {
-      status: "error",
-      message:
-        error.message === "Signups not allowed for otp"
-          ? "This admin email exists in the allowlist but still needs a Supabase Auth user."
-          : error.message,
+      status: error.message.toLowerCase().includes("rate limit") ? "error" : "success",
+      message: error.message.toLowerCase().includes("rate limit")
+        ? "Please wait a moment before requesting another login link."
+        : "If this address is an active admin, check your email for the secure sign-in link.",
     };
   }
 
   return {
     status: "success",
-    message: "Check your email for the secure admin sign-in link.",
+    message: "If this address is an active admin, check your email for the secure sign-in link.",
   };
 }
 

@@ -29,7 +29,8 @@ npm run build
 
 Admin login uses Supabase email OTP links. The admin email must exist in
 `public.admin_users` with `active = true`, and it must also have a Supabase
-Auth user. The admin form does not create users automatically.
+Auth user. The admin form does not create users automatically and returns a
+generic success message so visitors cannot confirm which emails are admins.
 
 Set `NEXT_PUBLIC_SITE_URL` or `SITE_URL` to the public site URL used for auth
 callbacks. In production this should be the Vercel/domain URL, for example:
