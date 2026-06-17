@@ -58,6 +58,18 @@ type TestimonialRow = {
   sort_order: number;
 };
 
+type CustomerReviewRow = {
+  id: string;
+  customer_name: string;
+  location: string | null;
+  rating: number;
+  quote: string;
+  artwork_title: string | null;
+  status: "approved";
+  sort_order: number;
+  approved_at: string | null;
+};
+
 function getPublicClient() {
   return getPublicSupabaseClient();
 }
@@ -104,6 +116,18 @@ function mapArtwork(row: ArtworkRow): Artwork {
 function mapTestimonial(row: TestimonialRow): Testimonial {
   return {
     id: row.id,
+    customerName: row.customer_name,
+    location: row.location,
+    rating: row.rating,
+    quote: row.quote,
+    artworkTitle: row.artwork_title,
+    sortOrder: row.sort_order,
+  };
+}
+
+function mapCustomerReview(row: CustomerReviewRow): Testimonial {
+  return {
+    id: `customer-review-${row.id}`,
     customerName: row.customer_name,
     location: row.location,
     rating: row.rating,
@@ -209,16 +233,30 @@ export async function getArtworksByCollectionSlug(collectionSlug: string) {
 }
 
 export async function getTestimonials() {
-  const data = await safeQuery<TestimonialRow[]>(
-    getPublicClient()
-      .from("testimonials")
-      .select("id,customer_name,location,rating,quote,artwork_title,is_published,sort_order")
-      .eq("is_published", true)
-      .order("sort_order", { ascending: true })
-      .order("created_at", { ascending: false }),
-  );
+  const [curatedData, verifiedData] = await Promise.all([
+    safeQuery<TestimonialRow[]>(
+      getPublicClient()
+        .from("testimonials")
+        .select("id,customer_name,location,rating,quote,artwork_title,is_published,sort_order")
+        .eq("is_published", true)
+        .order("sort_order", { ascending: true })
+        .order("created_at", { ascending: false }),
+    ),
+    safeQuery<CustomerReviewRow[]>(
+      getPublicClient()
+        .from("customer_reviews")
+        .select("id,customer_name,location,rating,quote,artwork_title,status,sort_order,approved_at")
+        .eq("status", "approved")
+        .order("sort_order", { ascending: true })
+        .order("approved_at", { ascending: false }),
+    ),
+  ]);
 
-  return data?.length ? data.map(mapTestimonial) : fallbackTestimonials;
+  const verified = verifiedData?.length ? verifiedData.map(mapCustomerReview) : [];
+  const curated = curatedData?.length ? curatedData.map(mapTestimonial) : [];
+  const testimonials = [...verified, ...curated].sort((a, b) => a.sortOrder - b.sortOrder);
+
+  return testimonials.length ? testimonials : fallbackTestimonials;
 }
 
 export function getFallbackArtworkSlugs() {

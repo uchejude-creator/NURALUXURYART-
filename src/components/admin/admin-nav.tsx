@@ -6,6 +6,7 @@ const adminLinks = [
   { href: "/admin", label: "Overview" },
   { href: "/admin/artworks", label: "Artworks" },
   { href: "/admin/testimonials", label: "Testimonials" },
+  { href: "/admin/reviews", label: "Reviews" },
   { href: "/admin/orders", label: "Orders" },
   { href: "/admin/messages", label: "Messages" },
 ];

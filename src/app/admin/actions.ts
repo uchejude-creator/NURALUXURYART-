@@ -4,8 +4,8 @@ import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
-import { siteConfig } from "@/config/site";
 import { requireAdmin } from "@/lib/admin";
+import { getPublicOrigin } from "@/lib/site-url";
 import { createClient } from "@/lib/supabase/server";
 
 export type AdminLoginState = {
@@ -23,6 +23,7 @@ const CHECKOUT_STATUSES = new Set([
 ]);
 
 const MESSAGE_STATUSES = new Set(["new", "reviewed", "replied", "closed"]);
+const REVIEW_STATUSES = new Set(["invited", "pending", "approved", "rejected"]);
 const AVAILABILITY = new Set(["available", "on-request", "reserved", "sold"]);
 const ARTWORK_IMAGE_BUCKET = "artwork-media";
 const MAX_IMAGE_SIZE = 10 * 1024 * 1024;
@@ -95,36 +96,11 @@ function refreshTestimonials() {
   revalidatePath("/admin/testimonials");
 }
 
-function stripTrailingSlash(value: string) {
-  return value.replace(/\/+$/, "");
-}
-
-function getConfiguredSiteUrl() {
-  return stripTrailingSlash(process.env.NEXT_PUBLIC_SITE_URL ?? process.env.SITE_URL ?? siteConfig.url);
-}
-
-function isLocalOrigin(value: string | null) {
-  if (!value) {
-    return false;
-  }
-
-  try {
-    const { hostname } = new URL(value);
-
-    return hostname === "localhost" || hostname === "127.0.0.1" || hostname === "::1";
-  } catch {
-    return false;
-  }
-}
-
-function getAdminRedirectOrigin(requestOrigin: string | null) {
-  const configuredUrl = getConfiguredSiteUrl();
-
-  if (!requestOrigin || isLocalOrigin(requestOrigin)) {
-    return configuredUrl;
-  }
-
-  return stripTrailingSlash(requestOrigin);
+function refreshCustomerReviews() {
+  revalidatePath("/");
+  revalidatePath("/admin");
+  revalidatePath("/admin/reviews");
+  revalidatePath("/admin/orders");
 }
 
 async function uploadArtworkImage({
@@ -196,7 +172,7 @@ export async function sendAdminLoginLink(
 
   const supabase = await createClient();
   const requestHeaders = await headers();
-  const redirectOrigin = getAdminRedirectOrigin(requestHeaders.get("origin"));
+  const redirectOrigin = getPublicOrigin(requestHeaders.get("origin"));
 
   const { error } = await supabase.auth.signInWithOtp({
     email,
@@ -459,4 +435,158 @@ export async function deleteTestimonialAction(formData: FormData) {
 
   refreshTestimonials();
   redirect("/admin/testimonials?updated=deleted");
+}
+
+export async function createReviewInvitationAction(formData: FormData) {
+  const { supabase } = await requireAdmin();
+  const customerName = cleanText(formData.get("customerName"), 160);
+  const customerEmail = cleanText(formData.get("customerEmail"), 254).toLowerCase();
+  const artworkTitle = cleanOptionalText(formData.get("artworkTitle"), 180);
+
+  if (!customerName || !customerEmail.includes("@")) {
+    redirect("/admin/reviews?error=missing-review-invitation-fields");
+  }
+
+  const { error } = await supabase.from("customer_reviews").insert({
+    customer_name: customerName,
+    customer_email: customerEmail,
+    location: cleanOptionalText(formData.get("location"), 160),
+    artwork_title: artworkTitle,
+    status: "invited",
+    sort_order: cleanInteger(formData.get("sortOrder"), 100),
+  });
+
+  if (error) {
+    redirect(`/admin/reviews?error=${encodeURIComponent(error.message)}`);
+  }
+
+  refreshCustomerReviews();
+  redirect("/admin/reviews?updated=invited");
+}
+
+export async function createReviewInvitationFromOrderItemAction(formData: FormData) {
+  const { supabase } = await requireAdmin();
+  const requestId = cleanText(formData.get("requestId"), 80);
+  const itemId = cleanText(formData.get("itemId"), 80);
+
+  if (!requestId || !itemId) {
+    redirect("/admin/orders?error=missing-review-order-fields");
+  }
+
+  const [{ data: request, error: requestError }, { data: item, error: itemError }] =
+    await Promise.all([
+      supabase
+        .from("checkout_requests")
+        .select("id,customer_name,customer_email,delivery_city,delivery_state")
+        .eq("id", requestId)
+        .maybeSingle(),
+      supabase
+        .from("checkout_request_items")
+        .select("id,request_id,title")
+        .eq("id", itemId)
+        .eq("request_id", requestId)
+        .maybeSingle(),
+    ]);
+
+  if (requestError || itemError || !request || !item) {
+    redirect("/admin/orders?error=review-source-not-found");
+  }
+
+  const location = [request.delivery_city, request.delivery_state].filter(Boolean).join(", ") || null;
+  const { error } = await supabase.from("customer_reviews").insert({
+    checkout_request_id: request.id,
+    checkout_request_item_id: item.id,
+    customer_name: request.customer_name,
+    customer_email: request.customer_email,
+    location,
+    artwork_title: item.title,
+    status: "invited",
+    sort_order: 50,
+  });
+
+  if (error) {
+    redirect(`/admin/orders?error=${encodeURIComponent(error.message)}`);
+  }
+
+  refreshCustomerReviews();
+  redirect("/admin/orders?updated=review-link");
+}
+
+export async function updateCustomerReviewAction(formData: FormData) {
+  const { supabase } = await requireAdmin();
+  const id = cleanText(formData.get("id"), 80);
+  const status = cleanText(formData.get("status"), 40);
+  const customerName = cleanText(formData.get("customerName"), 160);
+  const customerEmail = cleanText(formData.get("customerEmail"), 254).toLowerCase();
+  const quote = cleanOptionalText(formData.get("quote"), 900);
+  const rating = formData.get("rating") ? cleanRating(formData.get("rating")) : null;
+
+  if (!id || !REVIEW_STATUSES.has(status) || !customerName || !customerEmail.includes("@")) {
+    redirect("/admin/reviews?error=missing-review-fields");
+  }
+
+  const { error } = await supabase
+    .from("customer_reviews")
+    .update({
+      customer_name: customerName,
+      customer_email: customerEmail,
+      location: cleanOptionalText(formData.get("location"), 160),
+      artwork_title: cleanOptionalText(formData.get("artworkTitle"), 180),
+      rating,
+      quote,
+      status,
+      sort_order: cleanInteger(formData.get("sortOrder"), 100),
+      approved_at: status === "approved" ? new Date().toISOString() : null,
+    })
+    .eq("id", id);
+
+  if (error) {
+    redirect(`/admin/reviews?error=${encodeURIComponent(error.message)}`);
+  }
+
+  refreshCustomerReviews();
+  redirect("/admin/reviews?updated=saved");
+}
+
+export async function moderateCustomerReviewAction(formData: FormData) {
+  const { supabase } = await requireAdmin();
+  const id = cleanText(formData.get("id"), 80);
+  const status = cleanText(formData.get("status"), 40);
+
+  if (!id || !["approved", "rejected"].includes(status)) {
+    redirect("/admin/reviews?error=invalid-review-status");
+  }
+
+  const { error } = await supabase
+    .from("customer_reviews")
+    .update({
+      status,
+      approved_at: status === "approved" ? new Date().toISOString() : null,
+    })
+    .eq("id", id);
+
+  if (error) {
+    redirect(`/admin/reviews?error=${encodeURIComponent(error.message)}`);
+  }
+
+  refreshCustomerReviews();
+  redirect(`/admin/reviews?updated=${status}`);
+}
+
+export async function deleteCustomerReviewAction(formData: FormData) {
+  const { supabase } = await requireAdmin();
+  const id = cleanText(formData.get("id"), 80);
+
+  if (!id) {
+    redirect("/admin/reviews?error=missing-review-id");
+  }
+
+  const { error } = await supabase.from("customer_reviews").delete().eq("id", id);
+
+  if (error) {
+    redirect(`/admin/reviews?error=${encodeURIComponent(error.message)}`);
+  }
+
+  refreshCustomerReviews();
+  redirect("/admin/reviews?updated=deleted");
 }

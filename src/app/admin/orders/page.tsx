@@ -1,11 +1,17 @@
 import Image from "next/image";
 import Link from "next/link";
+import { headers } from "next/headers";
 
-import { updateCheckoutStatusAction } from "@/app/admin/actions";
+import {
+  createReviewInvitationFromOrderItemAction,
+  updateCheckoutStatusAction,
+} from "@/app/admin/actions";
 import { AdminNav } from "@/components/admin/admin-nav";
+import { CopyReviewLinkButton } from "@/components/admin/copy-review-link-button";
 import { formatCurrency } from "@/lib/format";
 import { requireAdmin } from "@/lib/admin";
 import { routes } from "@/lib/routes";
+import { getPublicOrigin } from "@/lib/site-url";
 
 export const dynamic = "force-dynamic";
 
@@ -41,6 +47,13 @@ type CheckoutItem = {
   image_src: string | null;
 };
 
+type CustomerReviewLink = {
+  id: string;
+  checkout_request_item_id: string | null;
+  review_token: string;
+  status: string;
+};
+
 const checkoutStatuses = [
   "new",
   "contacted",
@@ -62,7 +75,8 @@ function formatDate(value: string) {
 }
 
 export default async function AdminOrdersPage() {
-  const { email, supabase } = await requireAdmin();
+  const [{ email, supabase }, requestHeaders] = await Promise.all([requireAdmin(), headers()]);
+  const baseUrl = getPublicOrigin(requestHeaders.get("origin"));
 
   const { data: requestsData } = await supabase
     .from("checkout_requests")
@@ -83,8 +97,24 @@ export default async function AdminOrdersPage() {
     : { data: [] };
 
   const items = (itemsData ?? []) as CheckoutItem[];
+  const itemIds = items.map((item) => item.id);
+  const { data: reviewsData } = itemIds.length
+    ? await supabase
+        .from("customer_reviews")
+        .select("id,checkout_request_item_id,review_token,status")
+        .in("checkout_request_item_id", itemIds)
+        .order("created_at", { ascending: false })
+    : { data: [] };
+  const reviews = (reviewsData ?? []) as CustomerReviewLink[];
   const itemsByRequest = items.reduce<Record<string, CheckoutItem[]>>((grouped, item) => {
     grouped[item.request_id] = [...(grouped[item.request_id] ?? []), item];
+    return grouped;
+  }, {});
+  const reviewsByItem = reviews.reduce<Record<string, CustomerReviewLink>>((grouped, review) => {
+    if (review.checkout_request_item_id && !grouped[review.checkout_request_item_id]) {
+      grouped[review.checkout_request_item_id] = review;
+    }
+
     return grouped;
   }, {});
 
@@ -198,6 +228,40 @@ export default async function AdminOrdersPage() {
                               {item.price ? formatCurrency(item.price) : "Available on request"} x{" "}
                               {item.quantity}
                             </p>
+                            {reviewsByItem[item.id] ? (
+                              <div className="mt-4 rounded-card border border-gallery-white/10 bg-ink/45 p-3">
+                                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gold">
+                                  Review link: {reviewsByItem[item.id].status}
+                                </p>
+                                <div className="mt-3 flex flex-wrap gap-2">
+                                  <CopyReviewLinkButton
+                                    link={`${baseUrl}${routes.review(reviewsByItem[item.id].review_token)}`}
+                                  />
+                                  <Link
+                                    href={`${baseUrl}${routes.review(reviewsByItem[item.id].review_token)}`}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="inline-flex min-h-10 items-center rounded-full border border-gallery-white/15 px-4 text-xs font-semibold uppercase tracking-[0.18em] text-gallery-white transition-colors hover:border-gold hover:text-gold"
+                                  >
+                                    Open
+                                  </Link>
+                                </div>
+                              </div>
+                            ) : (
+                              <form
+                                action={createReviewInvitationFromOrderItemAction}
+                                className="mt-4"
+                              >
+                                <input type="hidden" name="requestId" value={request.id} />
+                                <input type="hidden" name="itemId" value={item.id} />
+                                <button
+                                  type="submit"
+                                  className="min-h-10 rounded-full border border-gold/35 px-4 text-xs font-semibold uppercase tracking-[0.18em] text-gold transition-colors hover:bg-gold hover:text-ink"
+                                >
+                                  Create review link
+                                </button>
+                              </form>
+                            )}
                           </div>
                         </li>
                       ))}

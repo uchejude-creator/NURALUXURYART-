@@ -28,6 +28,12 @@ const cards = [
     meta: "Social proof",
   },
   {
+    href: "/admin/reviews",
+    title: "Verified Reviews",
+    description: "Create private buyer review links, approve submissions, and publish real feedback.",
+    meta: "Review moderation",
+  },
+  {
     href: "/admin/orders",
     title: "Checkout Requests",
     description: "Review customer selections, delivery details, and purchase status.",
@@ -43,10 +49,16 @@ const cards = [
 
 export default async function AdminPage() {
   const { email, supabase } = await requireAdmin();
-  const [artworkCount, orderCount, messageCount] = await Promise.all([
+  const [artworkCount, orderCount, messageCount, reviewCount] = await Promise.all([
     getCount(supabase.from("artworks").select("*", { count: "exact", head: true })),
     getCount(supabase.from("checkout_requests").select("*", { count: "exact", head: true })),
     getCount(supabase.from("contact_messages").select("*", { count: "exact", head: true })),
+    getCount(
+      supabase
+        .from("customer_reviews")
+        .select("*", { count: "exact", head: true })
+        .eq("status", "pending"),
+    ),
   ]);
 
   return (
@@ -77,6 +89,7 @@ export default async function AdminPage() {
             ["Artworks", artworkCount, "Catalog records"],
             ["Checkout requests", orderCount, "Collector orders"],
             ["Messages", messageCount, "Contact inbox"],
+            ["Pending reviews", reviewCount, "Approval queue"],
           ].map(([label, value, caption]) => (
             <div
               key={label}

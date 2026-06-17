@@ -5,6 +5,7 @@ export const routes = {
   artwork: (slug: string) => `/artworks/${slug}`,
   checkout: "/checkout",
   contact: "/contact",
+  review: (token: string) => `/reviews/${token}`,
   authenticity: "/authenticity",
   careGuide: "/care-guide",
   privacy: "/privacy-policy",
