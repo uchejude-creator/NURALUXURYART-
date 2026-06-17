@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 
+import { ShareArtworkButton } from "@/components/artwork/share-artwork-button";
 import { AddToCartButton } from "@/components/cart/add-to-cart-button";
 import { getArtworkBySlug, getFallbackArtworkSlugs } from "@/lib/catalog";
 import { formatCurrency } from "@/lib/format";
@@ -53,9 +54,12 @@ export default async function ArtworkPage({ params }: ArtworkPageProps) {
           />
         </div>
         <section>
-          <p className="mb-5 text-xs font-semibold uppercase tracking-[0.34em] text-gold">
-            Artwork
-          </p>
+          <div className="mb-5 flex items-center justify-between gap-4">
+            <p className="text-xs font-semibold uppercase tracking-[0.34em] text-gold">
+              Artwork
+            </p>
+            <ShareArtworkButton path={routes.artwork(artwork.slug)} title={artwork.title} />
+          </div>
           <h1 className="font-serif text-6xl font-light tracking-tight sm:text-8xl">
             {artwork.title}
           </h1>
