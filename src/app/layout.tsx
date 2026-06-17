@@ -5,6 +5,7 @@ import { CartDrawer } from "@/components/cart/cart-drawer";
 import { CartProvider } from "@/components/cart/cart-context";
 import { SiteFooter } from "@/components/layout/site-footer";
 import { SiteHeader } from "@/components/layout/site-header";
+import { StorefrontChromeGuard } from "@/components/layout/storefront-chrome-guard";
 import { ScrollRestoration } from "@/components/motion/scroll-restoration";
 import { siteConfig } from "@/config/site";
 import "./globals.css";
@@ -57,10 +58,14 @@ export default function RootLayout({
         <CartProvider>
           <AdminAuthLinkRedirect />
           <ScrollRestoration />
-          <SiteHeader />
+          <StorefrontChromeGuard>
+            <SiteHeader />
+          </StorefrontChromeGuard>
           {children}
-          <SiteFooter />
-          <CartDrawer />
+          <StorefrontChromeGuard>
+            <SiteFooter />
+            <CartDrawer />
+          </StorefrontChromeGuard>
         </CartProvider>
       </body>
     </html>

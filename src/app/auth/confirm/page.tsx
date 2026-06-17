@@ -60,7 +60,10 @@ export default async function AuthConfirmPage({ searchParams }: AuthConfirmPageP
   }
 
   return (
-    <main className="min-h-screen bg-ink px-6 pb-20 pt-36 text-gallery-white lg:px-10 lg:pt-44">
+    <main
+      data-workspace-shell
+      className="min-h-screen bg-ink px-6 pb-20 pt-36 text-gallery-white lg:px-10 lg:pt-44"
+    >
       <section className="mx-auto max-w-xl rounded-card border border-gallery-white/10 bg-gallery-white/[0.04] p-7 shadow-[0_30px_90px_rgba(0,0,0,0.28)] lg:p-9">
         <p className="text-xs font-semibold uppercase tracking-[0.34em] text-gold">
           NURALUXURYART Admin

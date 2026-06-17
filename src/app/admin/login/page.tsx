@@ -24,7 +24,10 @@ export default async function AdminLoginPage({ searchParams }: AdminLoginPagePro
   }
 
   return (
-    <main className="min-h-screen bg-ink px-6 pb-20 pt-36 text-gallery-white lg:px-10 lg:pt-44">
+    <main
+      data-workspace-shell
+      className="min-h-screen bg-ink px-6 pb-20 pt-36 text-gallery-white lg:px-10 lg:pt-44"
+    >
       <section className="mx-auto grid max-w-5xl overflow-hidden rounded-card border border-gallery-white/10 bg-gallery-white/[0.04] shadow-[0_30px_90px_rgba(0,0,0,0.28)] lg:grid-cols-[0.9fr_1.1fr]">
         <div className="border-b border-gallery-white/10 p-7 lg:border-b-0 lg:border-r lg:p-9">
           <p className="text-xs font-semibold uppercase tracking-[0.34em] text-gold">

@@ -50,7 +50,10 @@ export default async function AdminPage() {
   ]);
 
   return (
-    <main className="min-h-screen bg-ink px-6 pb-20 pt-32 text-gallery-white lg:px-10 lg:pt-40">
+    <main
+      data-workspace-shell
+      className="min-h-screen bg-ink px-6 pb-20 pt-32 text-gallery-white lg:px-10 lg:pt-40"
+    >
       <section className="mx-auto max-w-site">
         <AdminNav email={email} />
 

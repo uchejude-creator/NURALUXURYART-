@@ -49,6 +49,12 @@ a {
   text-underline-offset: 0.25em;
 }
 
+body:has([data-workspace-shell]) header,
+body:has([data-workspace-shell]) footer#contact,
+body:has([data-workspace-shell]) aside[aria-label="Shopping cart"] {
+  display: none;
+}
+
 .reveal-on-scroll {
   opacity: 0;
   transform: translateY(2rem);
