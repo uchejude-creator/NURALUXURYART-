@@ -22,6 +22,12 @@ const cards = [
     meta: "Artwork operations",
   },
   {
+    href: "/admin/testimonials",
+    title: "Testimonials",
+    description: "Curate collector notes, ratings, and published reviews for the homepage carousel.",
+    meta: "Social proof",
+  },
+  {
     href: "/admin/orders",
     title: "Checkout Requests",
     description: "Review customer selections, delivery details, and purchase status.",
@@ -82,7 +88,7 @@ export default async function AdminPage() {
           ))}
         </div>
 
-        <div className="mt-8 grid gap-5 lg:grid-cols-3">
+        <div className="mt-8 grid gap-5 md:grid-cols-2 xl:grid-cols-4">
           {cards.map((card) => (
             <Link
               key={card.href}

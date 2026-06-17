@@ -51,6 +51,20 @@ function cleanPrice(value: FormDataEntryValue | null) {
   return Number.isFinite(parsed) && parsed >= 0 ? parsed : null;
 }
 
+function cleanInteger(value: FormDataEntryValue | null, fallback: number) {
+  if (typeof value !== "string") {
+    return fallback;
+  }
+
+  const parsed = Number.parseInt(value.replace(/[^\d-]/g, ""), 10);
+
+  return Number.isFinite(parsed) ? parsed : fallback;
+}
+
+function cleanRating(value: FormDataEntryValue | null) {
+  return Math.min(Math.max(cleanInteger(value, 5), 1), 5);
+}
+
 function getImageFile(value: FormDataEntryValue | null) {
   if (typeof File === "undefined" || !(value instanceof File) || value.size === 0) {
     return null;
@@ -73,6 +87,12 @@ function refreshStorefront() {
   revalidatePath("/collections");
   revalidatePath("/artworks/[slug]", "page");
   revalidatePath("/collections/[slug]", "page");
+}
+
+function refreshTestimonials() {
+  revalidatePath("/");
+  revalidatePath("/admin");
+  revalidatePath("/admin/testimonials");
 }
 
 function stripTrailingSlash(value: string) {
@@ -341,4 +361,80 @@ export async function updateContactStatusAction(formData: FormData) {
 
   revalidatePath("/admin/messages");
   redirect("/admin/messages?updated=status");
+}
+
+export async function createTestimonialAction(formData: FormData) {
+  const { supabase } = await requireAdmin();
+  const customerName = cleanText(formData.get("customerName"), 160);
+  const quote = cleanText(formData.get("quote"), 700);
+
+  if (!customerName || quote.length < 8) {
+    redirect("/admin/testimonials?error=missing-testimonial-fields");
+  }
+
+  const { error } = await supabase.from("testimonials").insert({
+    customer_name: customerName,
+    location: cleanOptionalText(formData.get("location"), 160),
+    rating: cleanRating(formData.get("rating")),
+    quote,
+    artwork_title: cleanOptionalText(formData.get("artworkTitle"), 180),
+    is_published: formData.has("isPublished"),
+    sort_order: cleanInteger(formData.get("sortOrder"), 100),
+  });
+
+  if (error) {
+    redirect(`/admin/testimonials?error=${encodeURIComponent(error.message)}`);
+  }
+
+  refreshTestimonials();
+  redirect("/admin/testimonials?updated=created");
+}
+
+export async function updateTestimonialAction(formData: FormData) {
+  const { supabase } = await requireAdmin();
+  const id = cleanText(formData.get("id"), 80);
+  const customerName = cleanText(formData.get("customerName"), 160);
+  const quote = cleanText(formData.get("quote"), 700);
+
+  if (!id || !customerName || quote.length < 8) {
+    redirect("/admin/testimonials?error=missing-testimonial-fields");
+  }
+
+  const { error } = await supabase
+    .from("testimonials")
+    .update({
+      customer_name: customerName,
+      location: cleanOptionalText(formData.get("location"), 160),
+      rating: cleanRating(formData.get("rating")),
+      quote,
+      artwork_title: cleanOptionalText(formData.get("artworkTitle"), 180),
+      is_published: formData.has("isPublished"),
+      sort_order: cleanInteger(formData.get("sortOrder"), 100),
+    })
+    .eq("id", id);
+
+  if (error) {
+    redirect(`/admin/testimonials?error=${encodeURIComponent(error.message)}`);
+  }
+
+  refreshTestimonials();
+  redirect("/admin/testimonials?updated=saved");
+}
+
+export async function deleteTestimonialAction(formData: FormData) {
+  const { supabase } = await requireAdmin();
+  const id = cleanText(formData.get("id"), 80);
+
+  if (!id) {
+    redirect("/admin/testimonials?error=missing-testimonial-id");
+  }
+
+  const { error } = await supabase.from("testimonials").delete().eq("id", id);
+
+  if (error) {
+    redirect(`/admin/testimonials?error=${encodeURIComponent(error.message)}`);
+  }
+
+  refreshTestimonials();
+  redirect("/admin/testimonials?updated=deleted");
 }

@@ -1,7 +1,9 @@
 import { collections as fallbackCollections } from "@/data/collections";
 import { featuredArtworks as fallbackFeaturedArtworks, signatureArtwork } from "@/data/featured-artworks";
+import { fallbackTestimonials } from "@/data/testimonials";
 import { getPublicSupabaseClient } from "@/lib/supabase/public";
 import type { Artwork, ArtworkAvailability, ArtworkCollection } from "@/types/artwork";
+import type { Testimonial } from "@/types/testimonial";
 
 type CollectionRow = {
   id: string;
@@ -45,6 +47,17 @@ type ArtworkRow = {
     | null;
 };
 
+type TestimonialRow = {
+  id: string;
+  customer_name: string;
+  location: string | null;
+  rating: number;
+  quote: string;
+  artwork_title: string | null;
+  is_published: boolean;
+  sort_order: number;
+};
+
 function getPublicClient() {
   return getPublicSupabaseClient();
 }
@@ -85,6 +98,18 @@ function mapArtwork(row: ArtworkRow): Artwork {
     careNotes: row.care_notes,
     featured: row.is_featured,
     signature: row.is_signature,
+  };
+}
+
+function mapTestimonial(row: TestimonialRow): Testimonial {
+  return {
+    id: row.id,
+    customerName: row.customer_name,
+    location: row.location,
+    rating: row.rating,
+    quote: row.quote,
+    artworkTitle: row.artwork_title,
+    sortOrder: row.sort_order,
   };
 }
 
@@ -181,6 +206,19 @@ export async function getArtworksByCollectionSlug(collectionSlug: string) {
   const artworks = await getPublishedArtworks();
 
   return artworks.filter((artwork) => artwork.collectionSlug === collectionSlug);
+}
+
+export async function getTestimonials() {
+  const data = await safeQuery<TestimonialRow[]>(
+    getPublicClient()
+      .from("testimonials")
+      .select("id,customer_name,location,rating,quote,artwork_title,is_published,sort_order")
+      .eq("is_published", true)
+      .order("sort_order", { ascending: true })
+      .order("created_at", { ascending: false }),
+  );
+
+  return data?.length ? data.map(mapTestimonial) : fallbackTestimonials;
 }
 
 export function getFallbackArtworkSlugs() {

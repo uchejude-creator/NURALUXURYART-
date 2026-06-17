@@ -1,4 +1,5 @@
 import type { Artwork, ArtworkCollection } from "@/types/artwork";
+import type { Testimonial } from "@/types/testimonial";
 
 import { ArtworkCard } from "../artwork/artwork-card";
 import { CollectionCard } from "../artwork/collection-card";
@@ -6,14 +7,21 @@ import { HeroSection } from "./hero-section";
 import { SectionShell } from "./section-shell";
 import { SignaturePiece } from "./signature-piece";
 import { StorySection } from "./story-section";
+import { TestimonialCarousel } from "./testimonial-carousel";
 
 type HomePageProps = {
   collections: ArtworkCollection[];
   featuredArtworks: Artwork[];
   signatureArtwork: Artwork;
+  testimonials: Testimonial[];
 };
 
-export function HomePage({ collections, featuredArtworks, signatureArtwork }: HomePageProps) {
+export function HomePage({
+  collections,
+  featuredArtworks,
+  signatureArtwork,
+  testimonials,
+}: HomePageProps) {
   return (
     <main>
       <HeroSection />
@@ -45,6 +53,8 @@ export function HomePage({ collections, featuredArtworks, signatureArtwork }: Ho
       <SignaturePiece artwork={signatureArtwork} />
 
       <StorySection />
+
+      <TestimonialCarousel testimonials={testimonials} />
 
       <SectionShell
         id="collector-care"

@@ -63,6 +63,32 @@ a {
   transform: translateY(0);
 }
 
+.testimonial-marquee {
+  overflow: hidden;
+  mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
+}
+
+.testimonial-track {
+  display: flex;
+  width: max-content;
+  animation: testimonial-marquee 44s linear infinite;
+  will-change: transform;
+}
+
+.testimonial-marquee:hover .testimonial-track {
+  animation-play-state: paused;
+}
+
+@keyframes testimonial-marquee {
+  from {
+    transform: translateX(0);
+  }
+
+  to {
+    transform: translateX(-50%);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   html {
     scroll-behavior: auto;
@@ -72,5 +98,14 @@ a {
     opacity: 1;
     transform: none;
     transition: none;
+  }
+
+  .testimonial-marquee {
+    overflow-x: auto;
+    mask-image: none;
+  }
+
+  .testimonial-track {
+    animation: none;
   }
 }
