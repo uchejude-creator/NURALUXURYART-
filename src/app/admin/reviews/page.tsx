@@ -50,6 +50,18 @@ function formatStatus(status: CustomerReview["status"]) {
   return status.replaceAll("_", " ");
 }
 
+function hasSubmittedContent(review: CustomerReview) {
+  return Boolean(review.rating && review.quote);
+}
+
+function getStatusOptions(review: CustomerReview) {
+  if (hasSubmittedContent(review)) {
+    return statusOptions;
+  }
+
+  return statusOptions.filter((status) => status === "invited" || status === "rejected");
+}
+
 function formatDate(value: string | null) {
   if (!value) {
     return "Not yet";
@@ -68,7 +80,10 @@ function PageNotice({ error, updated }: { error?: string; updated?: string }) {
 
   const isError = Boolean(error);
   const message = error
-    ? error
+    ? error === "review-content-required" ||
+      error.includes("customer_reviews_pending_content_check")
+      ? "A pending or approved review needs a customer rating and review text first."
+      : error
     : updated === "invited"
       ? "Private review invitation created."
       : updated === "approved"
@@ -264,7 +279,7 @@ function ReviewCard({ baseUrl, review }: { baseUrl: string; review: CustomerRevi
             defaultValue={review.status}
             className="mt-2 min-h-11 w-full rounded-card border border-gallery-white/15 bg-ink px-3 text-sm normal-case tracking-normal text-gallery-white outline-none transition-colors focus:border-gold"
           >
-            {statusOptions.map((status) => (
+            {getStatusOptions(review).map((status) => (
               <option key={status} value={status}>
                 {formatStatus(status)}
               </option>

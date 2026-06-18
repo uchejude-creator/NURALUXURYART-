@@ -66,6 +66,10 @@ function cleanRating(value: FormDataEntryValue | null) {
   return Math.min(Math.max(cleanInteger(value, 5), 1), 5);
 }
 
+function reviewStatusNeedsContent(status: string) {
+  return status === "pending" || status === "approved";
+}
+
 function getImageFile(value: FormDataEntryValue | null) {
   if (typeof File === "undefined" || !(value instanceof File) || value.size === 0) {
     return null;
@@ -525,6 +529,10 @@ export async function updateCustomerReviewAction(formData: FormData) {
     redirect("/admin/reviews?error=missing-review-fields");
   }
 
+  if (reviewStatusNeedsContent(status) && (!rating || !quote)) {
+    redirect("/admin/reviews?error=review-content-required");
+  }
+
   const { error } = await supabase
     .from("customer_reviews")
     .update({
@@ -555,6 +563,18 @@ export async function moderateCustomerReviewAction(formData: FormData) {
 
   if (!id || !["approved", "rejected"].includes(status)) {
     redirect("/admin/reviews?error=invalid-review-status");
+  }
+
+  if (status === "approved") {
+    const { data: review, error: reviewError } = await supabase
+      .from("customer_reviews")
+      .select("rating,quote")
+      .eq("id", id)
+      .maybeSingle();
+
+    if (reviewError || !review?.rating || !review.quote) {
+      redirect("/admin/reviews?error=review-content-required");
+    }
   }
 
   const { error } = await supabase
