@@ -8,11 +8,13 @@ import {
   useEffect,
   useMemo,
   useState,
+  useSyncExternalStore,
 } from "react";
 
 import type { Artwork } from "@/types/artwork";
 
 const CART_STORAGE_KEY = "nuraluxuryart-cart-v1";
+const CART_CHANGE_EVENT = "nuraluxuryart-cart-change";
 
 export type CartItem = {
   id: string;
@@ -56,6 +58,47 @@ function getStoredCartItems(): CartItem[] {
   }
 }
 
+function getCartSnapshot() {
+  return JSON.stringify(getStoredCartItems());
+}
+
+function getServerCartSnapshot() {
+  return "[]";
+}
+
+function parseCartSnapshot(snapshot: string): CartItem[] {
+  try {
+    const parsedCart = JSON.parse(snapshot) as unknown;
+
+    return Array.isArray(parsedCart) ? (parsedCart as CartItem[]) : [];
+  } catch {
+    return [];
+  }
+}
+
+function subscribeToCartStore(onStoreChange: () => void) {
+  if (typeof window === "undefined") {
+    return () => {};
+  }
+
+  window.addEventListener("storage", onStoreChange);
+  window.addEventListener(CART_CHANGE_EVENT, onStoreChange);
+
+  return () => {
+    window.removeEventListener("storage", onStoreChange);
+    window.removeEventListener(CART_CHANGE_EVENT, onStoreChange);
+  };
+}
+
+function writeStoredCartItems(items: CartItem[]) {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  window.localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(items));
+  window.dispatchEvent(new Event(CART_CHANGE_EVENT));
+}
+
 function artworkToCartItem(artwork: Artwork): CartItem {
   return {
     id: artwork.id,
@@ -70,12 +113,13 @@ function artworkToCartItem(artwork: Artwork): CartItem {
 }
 
 export function CartProvider({ children }: { children: ReactNode }) {
-  const [items, setItems] = useState<CartItem[]>(getStoredCartItems);
+  const cartSnapshot = useSyncExternalStore(
+    subscribeToCartStore,
+    getCartSnapshot,
+    getServerCartSnapshot,
+  );
+  const items = useMemo(() => parseCartSnapshot(cartSnapshot), [cartSnapshot]);
   const [isCartOpen, setIsCartOpen] = useState(false);
-
-  useEffect(() => {
-    window.localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(items));
-  }, [items]);
 
   useEffect(() => {
     document.body.style.overflow = isCartOpen ? "hidden" : "";
@@ -85,8 +129,12 @@ export function CartProvider({ children }: { children: ReactNode }) {
     };
   }, [isCartOpen]);
 
+  const updateItems = useCallback((updater: (currentItems: CartItem[]) => CartItem[]) => {
+    writeStoredCartItems(updater(getStoredCartItems()));
+  }, []);
+
   const addItem = useCallback((artwork: Artwork) => {
-    setItems((currentItems) => {
+    updateItems((currentItems) => {
       const existingItem = currentItems.find((item) => item.id === artwork.id);
 
       if (existingItem) {
@@ -97,30 +145,30 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
       return [...currentItems, artworkToCartItem(artwork)];
     });
-  }, []);
+  }, [updateItems]);
 
   const decrementItem = useCallback((id: string) => {
-    setItems((currentItems) =>
+    updateItems((currentItems) =>
       currentItems
         .map((item) => (item.id === id ? { ...item, quantity: item.quantity - 1 } : item))
         .filter((item) => item.quantity > 0),
     );
-  }, []);
+  }, [updateItems]);
 
   const incrementItem = useCallback((id: string) => {
-    setItems((currentItems) =>
+    updateItems((currentItems) =>
       currentItems.map((item) =>
         item.id === id ? { ...item, quantity: item.quantity + 1 } : item,
       ),
     );
-  }, []);
+  }, [updateItems]);
 
   const removeItem = useCallback((id: string) => {
-    setItems((currentItems) => currentItems.filter((item) => item.id !== id));
-  }, []);
+    updateItems((currentItems) => currentItems.filter((item) => item.id !== id));
+  }, [updateItems]);
 
   const clearCart = useCallback(() => {
-    setItems([]);
+    writeStoredCartItems([]);
   }, []);
 
   const value = useMemo<CartContextValue>(() => {

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 
+import { sendContactEmails } from "@/lib/email/templates";
 import { getPublicSupabaseClient } from "@/lib/supabase/public";
 
 type ContactPayload = {
@@ -108,6 +109,14 @@ export async function POST(request: Request) {
     console.error(error);
     return errorResponse("We could not save your message. Please try again.", 500);
   }
+
+  await sendContactEmails({
+    name,
+    email,
+    phone,
+    topic,
+    message,
+  });
 
   return successResponse();
 }

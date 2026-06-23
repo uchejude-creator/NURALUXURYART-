@@ -4,6 +4,7 @@ import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
+import { sendReviewInvitationEmail } from "@/lib/email/templates";
 import { requireAdmin } from "@/lib/admin";
 import { getPublicOrigin } from "@/lib/site-url";
 import { createClient } from "@/lib/supabase/server";
@@ -26,6 +27,7 @@ const MESSAGE_STATUSES = new Set(["new", "reviewed", "replied", "closed"]);
 const REVIEW_STATUSES = new Set(["invited", "pending", "approved", "rejected"]);
 const AVAILABILITY = new Set(["available", "on-request", "reserved", "sold"]);
 const ARTWORK_IMAGE_BUCKET = "artwork-media";
+const GALLERY_IMAGE_SLOTS = 3;
 const MAX_IMAGE_SIZE = 10 * 1024 * 1024;
 const IMAGE_EXTENSIONS: Record<string, string> = {
   "image/jpeg": "jpg",
@@ -127,7 +129,8 @@ async function uploadArtworkImage({
   }
 
   const imageBuffer = Buffer.from(await file.arrayBuffer());
-  const objectPath = `artworks/${slug}-${Date.now()}.${extension}`;
+  const uniqueSuffix = Math.random().toString(36).slice(2, 8);
+  const objectPath = `artworks/${slug}-${Date.now()}-${uniqueSuffix}.${extension}`;
   const { error } = await supabase.storage.from(ARTWORK_IMAGE_BUCKET).upload(objectPath, imageBuffer, {
     cacheControl: "31536000",
     contentType: file.type,
@@ -159,6 +162,48 @@ async function resolveArtworkImage({
   }
 
   return cleanText(formData.get("imageSrc"), 1000) || fallback;
+}
+
+async function resolveArtworkGalleryImages({
+  formData,
+  slug,
+  supabase,
+  title,
+}: {
+  formData: FormData;
+  slug: string;
+  supabase: Awaited<ReturnType<typeof createClient>>;
+  title: string;
+}) {
+  const galleryImages = [];
+
+  for (let index = 1; index <= GALLERY_IMAGE_SLOTS; index += 1) {
+    if (formData.has(`galleryImageRemove${index}`)) {
+      continue;
+    }
+
+    const imageFile = getImageFile(formData.get(`galleryImageUpload${index}`));
+    const src = imageFile
+      ? await uploadArtworkImage({ file: imageFile, slug: `${slug}-view-${index}`, supabase })
+      : cleanText(formData.get(`galleryImageSrc${index}`), 1000) ||
+        cleanText(formData.get(`currentGalleryImageSrc${index}`), 1000);
+
+    if (!src) {
+      continue;
+    }
+
+    galleryImages.push({
+      src,
+      alt:
+        cleanText(formData.get(`galleryImageAlt${index}`), 500) ||
+        `Additional view ${index} of ${title}`,
+      label: `View ${index + 1}`,
+      fit: "cover",
+      position: "center",
+    });
+  }
+
+  return galleryImages;
 }
 
 export async function sendAdminLoginLink(
@@ -220,6 +265,7 @@ export async function createArtworkAction(formData: FormData) {
   }
 
   let imageSrc: string;
+  let galleryImages;
 
   try {
     imageSrc = await resolveArtworkImage({
@@ -227,6 +273,12 @@ export async function createArtworkAction(formData: FormData) {
       formData,
       slug,
       supabase,
+    });
+    galleryImages = await resolveArtworkGalleryImages({
+      formData,
+      slug,
+      supabase,
+      title,
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Image upload failed.";
@@ -246,6 +298,7 @@ export async function createArtworkAction(formData: FormData) {
     currency: "NGN",
     availability,
     image_src: imageSrc,
+    gallery_images: galleryImages,
     image_alt:
       cleanText(formData.get("imageAlt"), 500) ||
       `Hand-painted artwork titled ${title} from NURALUXURYART`,
@@ -281,6 +334,7 @@ export async function updateArtworkAction(formData: FormData) {
   }
 
   let imageSrc: string;
+  let galleryImages;
 
   try {
     imageSrc = await resolveArtworkImage({
@@ -288,6 +342,12 @@ export async function updateArtworkAction(formData: FormData) {
       formData,
       slug,
       supabase,
+    });
+    galleryImages = await resolveArtworkGalleryImages({
+      formData,
+      slug,
+      supabase,
+      title,
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Image upload failed.";
@@ -306,6 +366,7 @@ export async function updateArtworkAction(formData: FormData) {
       price: cleanPrice(formData.get("price")),
       availability,
       image_src: imageSrc,
+      gallery_images: galleryImages,
       image_alt: cleanText(formData.get("imageAlt"), 500),
       materials: cleanOptionalText(formData.get("materials"), 500),
       dimensions: cleanOptionalText(formData.get("dimensions"), 120),
@@ -451,17 +512,33 @@ export async function createReviewInvitationAction(formData: FormData) {
     redirect("/admin/reviews?error=missing-review-invitation-fields");
   }
 
-  const { error } = await supabase.from("customer_reviews").insert({
-    customer_name: customerName,
-    customer_email: customerEmail,
-    location: cleanOptionalText(formData.get("location"), 160),
-    artwork_title: artworkTitle,
-    status: "invited",
-    sort_order: cleanInteger(formData.get("sortOrder"), 100),
-  });
+  const { data: review, error } = await supabase
+    .from("customer_reviews")
+    .insert({
+      customer_name: customerName,
+      customer_email: customerEmail,
+      location: cleanOptionalText(formData.get("location"), 160),
+      artwork_title: artworkTitle,
+      status: "invited",
+      sort_order: cleanInteger(formData.get("sortOrder"), 100),
+    })
+    .select("customer_name,customer_email,artwork_title,review_token")
+    .single();
 
   if (error) {
     redirect(`/admin/reviews?error=${encodeURIComponent(error.message)}`);
+  }
+
+  if (review) {
+    const requestHeaders = await headers();
+    const publicOrigin = getPublicOrigin(requestHeaders.get("origin"));
+
+    await sendReviewInvitationEmail({
+      customerName: review.customer_name,
+      customerEmail: review.customer_email,
+      artworkTitle: review.artwork_title,
+      reviewUrl: `${publicOrigin}/reviews/${review.review_token}`,
+    });
   }
 
   refreshCustomerReviews();
@@ -497,19 +574,35 @@ export async function createReviewInvitationFromOrderItemAction(formData: FormDa
   }
 
   const location = [request.delivery_city, request.delivery_state].filter(Boolean).join(", ") || null;
-  const { error } = await supabase.from("customer_reviews").insert({
-    checkout_request_id: request.id,
-    checkout_request_item_id: item.id,
-    customer_name: request.customer_name,
-    customer_email: request.customer_email,
-    location,
-    artwork_title: item.title,
-    status: "invited",
-    sort_order: 50,
-  });
+  const { data: review, error } = await supabase
+    .from("customer_reviews")
+    .insert({
+      checkout_request_id: request.id,
+      checkout_request_item_id: item.id,
+      customer_name: request.customer_name,
+      customer_email: request.customer_email,
+      location,
+      artwork_title: item.title,
+      status: "invited",
+      sort_order: 50,
+    })
+    .select("customer_name,customer_email,artwork_title,review_token")
+    .single();
 
   if (error) {
     redirect(`/admin/orders?error=${encodeURIComponent(error.message)}`);
+  }
+
+  if (review) {
+    const requestHeaders = await headers();
+    const publicOrigin = getPublicOrigin(requestHeaders.get("origin"));
+
+    await sendReviewInvitationEmail({
+      customerName: review.customer_name,
+      customerEmail: review.customer_email,
+      artworkTitle: review.artwork_title,
+      reviewUrl: `${publicOrigin}/reviews/${review.review_token}`,
+    });
   }
 
   refreshCustomerReviews();

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 
+import { sendNewsletterWelcomeEmail } from "@/lib/email/templates";
 import { getPublicSupabaseClient } from "@/lib/supabase/public";
 
 type NewsletterPayload = {
@@ -48,6 +49,8 @@ export async function POST(request: Request) {
     console.error(error);
     return errorResponse("We could not save your subscription. Please try again.", 500);
   }
+
+  await sendNewsletterWelcomeEmail(email);
 
   return NextResponse.json({
     ok: true,

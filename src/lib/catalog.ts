@@ -2,7 +2,12 @@ import { collections as fallbackCollections } from "@/data/collections";
 import { featuredArtworks as fallbackFeaturedArtworks, signatureArtwork } from "@/data/featured-artworks";
 import { fallbackTestimonials } from "@/data/testimonials";
 import { getPublicSupabaseClient } from "@/lib/supabase/public";
-import type { Artwork, ArtworkAvailability, ArtworkCollection } from "@/types/artwork";
+import type {
+  Artwork,
+  ArtworkAvailability,
+  ArtworkCollection,
+  ArtworkGalleryImage,
+} from "@/types/artwork";
 import type { Testimonial } from "@/types/testimonial";
 
 type CollectionRow = {
@@ -28,6 +33,7 @@ type ArtworkRow = {
   availability: ArtworkAvailability;
   image_src: string;
   image_alt: string;
+  gallery_images: unknown;
   materials: string | null;
   dimensions: string | null;
   origin: string | null;
@@ -70,6 +76,10 @@ type CustomerReviewRow = {
   approved_at: string | null;
 };
 
+const collectionImageOverrides = new Map(
+  fallbackCollections.map((collection) => [collection.slug, collection.imageSrc]),
+);
+
 function getPublicClient() {
   return getPublicSupabaseClient();
 }
@@ -80,10 +90,43 @@ function mapCollection(row: CollectionRow): ArtworkCollection {
     title: row.title,
     slug: row.slug,
     description: row.description,
-    imageSrc: row.image_src,
+    imageSrc: collectionImageOverrides.get(row.slug) ?? row.image_src,
     imageAlt: row.image_alt,
     sortOrder: row.sort_order,
   };
+}
+
+function isGalleryFit(value: unknown): value is ArtworkGalleryImage["fit"] {
+  return value === "contain" || value === "cover";
+}
+
+function mapGalleryImages(value: unknown, artworkTitle: string): ArtworkGalleryImage[] | undefined {
+  if (!Array.isArray(value)) {
+    return undefined;
+  }
+
+  const images = value
+    .map((item, index): ArtworkGalleryImage | null => {
+      if (!item || typeof item !== "object" || !("src" in item) || typeof item.src !== "string") {
+        return null;
+      }
+
+      const alt = "alt" in item && typeof item.alt === "string" ? item.alt : "";
+      const label = "label" in item && typeof item.label === "string" ? item.label : "";
+      const fit = "fit" in item && isGalleryFit(item.fit) ? item.fit : "cover";
+      const position = "position" in item && typeof item.position === "string" ? item.position : "center";
+
+      return {
+        src: item.src,
+        alt: alt || `Additional view ${index + 1} of ${artworkTitle}`,
+        label: label || `View ${index + 2}`,
+        fit,
+        position,
+      };
+    })
+    .filter((image): image is ArtworkGalleryImage => Boolean(image));
+
+  return images.length ? images : undefined;
 }
 
 function mapArtwork(row: ArtworkRow): Artwork {
@@ -103,6 +146,7 @@ function mapArtwork(row: ArtworkRow): Artwork {
     availability: row.availability,
     imageSrc: row.image_src,
     imageAlt: row.image_alt,
+    galleryImages: mapGalleryImages(row.gallery_images, row.title),
     materials: row.materials,
     dimensions: row.dimensions,
     origin: row.origin,
@@ -184,7 +228,7 @@ async function getPublishedArtworks() {
     getPublicClient()
       .from("artworks")
       .select(
-        "id,legacy_id,title,slug,medium,description,price,currency,availability,image_src,image_alt,materials,dimensions,origin,framing,care_notes,is_featured,is_signature,is_published,sort_order,artwork_collections(slug)",
+        "id,legacy_id,title,slug,medium,description,price,currency,availability,image_src,image_alt,gallery_images,materials,dimensions,origin,framing,care_notes,is_featured,is_signature,is_published,sort_order,artwork_collections(slug)",
       )
       .eq("is_published", true)
       .order("sort_order", { ascending: true })
@@ -212,7 +256,7 @@ export async function getArtworkBySlug(slug: string) {
     getPublicClient()
       .from("artworks")
       .select(
-        "id,legacy_id,title,slug,medium,description,price,currency,availability,image_src,image_alt,materials,dimensions,origin,framing,care_notes,is_featured,is_signature,is_published,sort_order,artwork_collections(slug)",
+        "id,legacy_id,title,slug,medium,description,price,currency,availability,image_src,image_alt,gallery_images,materials,dimensions,origin,framing,care_notes,is_featured,is_signature,is_published,sort_order,artwork_collections(slug)",
       )
       .eq("slug", slug)
       .eq("is_published", true)

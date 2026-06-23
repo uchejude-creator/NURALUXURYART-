@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 
+import { sendCheckoutRequestEmails } from "@/lib/email/templates";
+
 type CheckoutItemInput = {
   id?: unknown;
   title?: unknown;
@@ -203,6 +205,22 @@ export async function POST(request: Request) {
     console.error(error);
     return errorResponse("We could not save your checkout request. Please try again.", 500);
   }
+
+  await sendCheckoutRequestEmails({
+    requestId,
+    customerName,
+    customerEmail,
+    customerPhone,
+    deliveryPreference,
+    deliveryCountry,
+    deliveryState,
+    deliveryCity,
+    deliveryAddress,
+    deliveryLandmark: deliveryLandmark || null,
+    deliveryNote: deliveryNote || null,
+    items: checkoutItems,
+    totalAmount,
+  });
 
   return NextResponse.json({ requestId });
 }

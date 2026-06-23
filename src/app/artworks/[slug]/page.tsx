@@ -1,9 +1,10 @@
 import { notFound } from "next/navigation";
-import Image from "next/image";
 import Link from "next/link";
 
+import { ArtworkGallery } from "@/components/artwork/artwork-gallery";
 import { ShareArtworkButton } from "@/components/artwork/share-artwork-button";
 import { AddToCartButton } from "@/components/cart/add-to-cart-button";
+import { getArtworkGalleryImages } from "@/lib/artwork-gallery";
 import { getArtworkBySlug, getFallbackArtworkSlugs } from "@/lib/catalog";
 import { formatCurrency } from "@/lib/format";
 import { routes } from "@/lib/routes";
@@ -40,19 +41,12 @@ export default async function ArtworkPage({ params }: ArtworkPageProps) {
     notFound();
   }
 
+  const galleryImages = getArtworkGalleryImages(artwork);
+
   return (
     <main className="min-h-screen bg-cream px-6 pb-20 pt-32 text-ink lg:px-10 lg:pt-40">
       <div className="mx-auto grid max-w-site gap-12 lg:grid-cols-[1fr_0.85fr] lg:items-center">
-        <div className="relative mx-auto aspect-[4/5] w-full max-w-[42rem] overflow-hidden rounded-card bg-charcoal">
-          <Image
-            src={artwork.imageSrc}
-            alt={artwork.imageAlt}
-            fill
-            sizes="(min-width: 1024px) 50vw, 100vw"
-            className="object-contain p-3"
-            priority
-          />
-        </div>
+        <ArtworkGallery artworkTitle={artwork.title} images={galleryImages} />
         <section>
           <div className="mb-5 flex items-center justify-between gap-4">
             <p className="text-xs font-semibold uppercase tracking-[0.34em] text-gold">

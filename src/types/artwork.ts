@@ -1,5 +1,13 @@
 export type ArtworkAvailability = "available" | "on-request" | "reserved" | "sold";
 
+export type ArtworkGalleryImage = {
+  src: string;
+  alt: string;
+  label: string;
+  fit?: "contain" | "cover";
+  position?: string;
+};
+
 export type Artwork = {
   id: string;
   title: string;
@@ -17,6 +25,7 @@ export type Artwork = {
   origin?: string | null;
   framing?: string | null;
   careNotes?: string | null;
+  galleryImages?: ArtworkGalleryImage[];
   featured?: boolean;
   signature?: boolean;
 };

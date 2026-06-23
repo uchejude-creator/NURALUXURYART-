@@ -25,6 +25,7 @@ type AdminArtwork = {
   availability: string;
   image_src: string;
   image_alt: string;
+  gallery_images: AdminGalleryImage[] | null;
   materials: string | null;
   dimensions: string | null;
   origin: string | null;
@@ -36,7 +37,18 @@ type AdminArtwork = {
   sort_order: number;
 };
 
+type AdminGalleryImage = {
+  src?: unknown;
+  alt?: unknown;
+};
+
+type GalleryImageSlot = {
+  src: string;
+  alt: string;
+};
+
 const availabilityOptions = ["available", "on-request", "reserved", "sold"];
+const galleryImageSlotCount = 3;
 
 type AdminArtworksPageProps = {
   searchParams?: Promise<{
@@ -155,6 +167,20 @@ function ImageUploadField() {
   );
 }
 
+function GalleryImageUploadField({ index }: { index: number }) {
+  return (
+    <label className="block text-xs font-semibold uppercase tracking-[0.2em] text-gallery-white/60">
+      Upload view {index}
+      <input
+        name={`galleryImageUpload${index}`}
+        type="file"
+        accept="image/jpeg,image/png,image/webp"
+        className="mt-2 w-full rounded-card border border-dashed border-gallery-white/20 bg-ink px-3 py-3 text-sm normal-case tracking-normal text-gallery-white file:mr-4 file:rounded-full file:border-0 file:bg-gold file:px-4 file:py-2 file:text-xs file:font-semibold file:uppercase file:tracking-[0.16em] file:text-ink hover:file:bg-gallery-white"
+      />
+    </label>
+  );
+}
+
 function CollectionSelect({
   collections,
   defaultValue,
@@ -218,6 +244,90 @@ function Checkbox({
       />
       {label}
     </label>
+  );
+}
+
+function getGalleryImageSlots(images: AdminGalleryImage[] | null | undefined): GalleryImageSlot[] {
+  const galleryImages = Array.isArray(images) ? images : [];
+
+  return Array.from({ length: galleryImageSlotCount }, (_, index) => {
+    const image = galleryImages[index];
+
+    return {
+      src: typeof image?.src === "string" ? image.src : "",
+      alt: typeof image?.alt === "string" ? image.alt : "",
+    };
+  });
+}
+
+function GalleryImageFields({ images }: { images?: GalleryImageSlot[] }) {
+  const slots =
+    images ??
+    Array.from({ length: galleryImageSlotCount }, () => ({
+      src: "",
+      alt: "",
+    }));
+
+  return (
+    <div className="grid gap-4 rounded-card border border-gallery-white/10 bg-gallery-white/[0.03] p-4 md:col-span-2 lg:col-span-2">
+      <div>
+        <p className="text-xs font-semibold uppercase tracking-[0.24em] text-gold">
+          Product page gallery
+        </p>
+        <p className="mt-2 text-sm leading-6 text-gallery-white/50">
+          The main artwork image stays first. Add up to three optional extra views for the thumbnails
+          on the artwork detail page.
+        </p>
+      </div>
+      <div className="grid gap-4 lg:grid-cols-3">
+        {slots.map((slot, index) => {
+          const slotNumber = index + 1;
+
+          return (
+            <div
+              key={slotNumber}
+              className="grid gap-3 rounded-card border border-gallery-white/10 bg-ink/50 p-3"
+            >
+              <input
+                type="hidden"
+                name={`currentGalleryImageSrc${slotNumber}`}
+                value={slot.src}
+              />
+              <div className="relative aspect-square overflow-hidden rounded-card bg-charcoal">
+                {slot.src ? (
+                  <Image
+                    src={slot.src}
+                    alt={slot.alt || "Artwork gallery view"}
+                    fill
+                    sizes="14rem"
+                    className="object-cover"
+                  />
+                ) : (
+                  <div className="flex h-full items-center justify-center px-4 text-center text-[0.65rem] font-semibold uppercase tracking-[0.18em] text-gallery-white/35">
+                    Optional view {slotNumber}
+                  </div>
+                )}
+              </div>
+              <Field
+                name={`galleryImageSrc${slotNumber}`}
+                label={`View ${slotNumber} URL`}
+                defaultValue={slot.src}
+              />
+              <GalleryImageUploadField index={slotNumber} />
+              <Field
+                name={`galleryImageAlt${slotNumber}`}
+                label={`View ${slotNumber} alt text`}
+                defaultValue={slot.alt}
+                placeholder="Describe this artwork view"
+              />
+              {slot.src ? (
+                <Checkbox name={`galleryImageRemove${slotNumber}`} label="Remove this view" />
+              ) : null}
+            </div>
+          );
+        })}
+      </div>
+    </div>
   );
 }
 
@@ -292,6 +402,7 @@ function ArtworkForm({
           <Field name="imageSrc" label="Image URL" defaultValue={artwork.image_src} />
           <ImageUploadField />
           <Field name="imageAlt" label="Image alt text" defaultValue={artwork.image_alt} required />
+          <GalleryImageFields images={getGalleryImageSlots(artwork.gallery_images)} />
           <Field name="materials" label="Materials" defaultValue={artwork.materials} />
           <Field name="dimensions" label="Dimensions" defaultValue={artwork.dimensions} />
           <Field name="origin" label="Origin" defaultValue={artwork.origin ?? "Hand-painted in Turkey"} />
@@ -319,7 +430,7 @@ export default async function AdminArtworksPage({ searchParams }: AdminArtworksP
     supabase
       .from("artworks")
       .select(
-        "id,legacy_id,title,slug,collection_id,medium,description,price,availability,image_src,image_alt,materials,dimensions,origin,framing,care_notes,is_featured,is_signature,is_published,sort_order",
+        "id,legacy_id,title,slug,collection_id,medium,description,price,availability,image_src,image_alt,gallery_images,materials,dimensions,origin,framing,care_notes,is_featured,is_signature,is_published,sort_order",
       )
       .order("sort_order", { ascending: true })
       .order("title", { ascending: true }),
@@ -386,6 +497,7 @@ export default async function AdminArtworksPage({ searchParams }: AdminArtworksP
             />
             <ImageUploadField />
             <Field name="imageAlt" label="Image alt text" placeholder="Describe the artwork" />
+            <GalleryImageFields />
             <TextArea name="description" label="Description" rows={3} />
             <TextArea name="careNotes" label="Care notes" rows={3} />
             <Field name="materials" label="Materials" placeholder="Acrylic paint on textured canvas" />
