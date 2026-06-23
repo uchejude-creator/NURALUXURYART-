@@ -86,6 +86,26 @@ export function SiteHeader() {
 
         <div className="flex items-center gap-2 sm:gap-4">
           <Link
+            href={routes.account}
+            className="hidden h-10 w-10 items-center justify-center rounded-full text-gallery-white transition-colors hover:text-gold focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-gold md:flex"
+            aria-label="Open collector account"
+          >
+            <svg
+              aria-hidden="true"
+              viewBox="0 0 24 24"
+              className="h-5 w-5"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.8"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z" />
+              <path d="M4.5 20a7.5 7.5 0 0 1 15 0" />
+            </svg>
+          </Link>
+
+          <Link
             href={routes.checkout}
             className="relative flex h-10 w-10 items-center justify-center rounded-full text-gallery-white transition-colors hover:text-gold focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-gold md:hidden"
             aria-label={`Review cart with ${itemCount} selected artwork${itemCount === 1 ? "" : "s"}`}
@@ -177,6 +197,16 @@ export function SiteHeader() {
               </li>
             ))}
           </ul>
+
+          <div className="mt-8 border-t border-gallery-white/10 pt-6">
+            <Link
+              href={routes.account}
+              onClick={() => setIsMenuOpen(false)}
+              className="block text-sm font-semibold uppercase tracking-[0.26em] text-gallery-white transition-colors hover:text-gold"
+            >
+              Collector Account
+            </Link>
+          </div>
         </nav>
       </div>
     </header>

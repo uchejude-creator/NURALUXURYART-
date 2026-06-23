@@ -5,8 +5,8 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = {
-  title: "Confirm Admin Login",
-  description: "Complete secure NURALUXURYART admin access.",
+  title: "Confirm Sign In",
+  description: "Complete secure NURALUXURYART access.",
 };
 
 type AuthConfirmPageProps = {
@@ -25,6 +25,14 @@ function getSafeNext(value: string | null | undefined) {
   return value;
 }
 
+function getFailurePath(next: string) {
+  return next.startsWith("/account") ? "/account/login" : "/admin/login";
+}
+
+function getFailureMessage(next: string, message: string) {
+  return `${getFailurePath(next)}?error=${encodeURIComponent(message)}`;
+}
+
 async function confirmAuthLink(formData: FormData) {
   "use server";
 
@@ -33,7 +41,7 @@ async function confirmAuthLink(formData: FormData) {
   const next = getSafeNext(String(formData.get("next") ?? "/admin"));
 
   if (!tokenHash) {
-    redirect("/admin/login?error=Request+a+fresh+admin+sign-in+link.");
+    redirect(getFailureMessage(next, "Request a fresh sign-in link."));
   }
 
   const supabase = await createClient();
@@ -43,7 +51,7 @@ async function confirmAuthLink(formData: FormData) {
   });
 
   if (error) {
-    redirect("/admin/login?error=The+sign-in+link+is+invalid+or+has+expired.");
+    redirect(getFailureMessage(next, "The sign-in link is invalid or has expired."));
   }
 
   redirect(next);
@@ -54,9 +62,10 @@ export default async function AuthConfirmPage({ searchParams }: AuthConfirmPageP
   const tokenHash = params?.token_hash ?? "";
   const next = getSafeNext(params?.next);
   const type = params?.type ?? "email";
+  const isCustomerAccess = next.startsWith("/account");
 
   if (!tokenHash) {
-    redirect("/admin/login?error=Request+a+fresh+admin+sign-in+link.");
+    redirect(getFailureMessage(next, "Request a fresh sign-in link."));
   }
 
   return (
@@ -66,14 +75,15 @@ export default async function AuthConfirmPage({ searchParams }: AuthConfirmPageP
     >
       <section className="mx-auto max-w-xl rounded-card border border-gallery-white/10 bg-gallery-white/[0.04] p-7 shadow-[0_30px_90px_rgba(0,0,0,0.28)] lg:p-9">
         <p className="text-xs font-semibold uppercase tracking-[0.34em] text-gold">
-          NURALUXURYART Admin
+          {isCustomerAccess ? "NURALUXURYART Collector" : "NURALUXURYART Admin"}
         </p>
         <h1 className="mt-6 font-serif text-5xl font-light leading-none sm:text-7xl">
-          Confirm your secure sign-in.
+          {isCustomerAccess ? "Confirm your collector access." : "Confirm your secure sign-in."}
         </h1>
         <p className="mt-6 text-sm leading-7 text-gallery-white/70">
-          Finish the admin login from this trusted browser. This extra click keeps email scanners
-          from using the one-time link before you do.
+          {isCustomerAccess
+            ? "Finish signing in from this trusted browser. This extra click keeps email scanners from using your one-time link before you do."
+            : "Finish the admin login from this trusted browser. This extra click keeps email scanners from using the one-time link before you do."}
         </p>
 
         <form action={confirmAuthLink} className="mt-8">
@@ -84,7 +94,7 @@ export default async function AuthConfirmPage({ searchParams }: AuthConfirmPageP
             type="submit"
             className="flex min-h-13 w-full items-center justify-center rounded-full bg-gold px-8 text-xs font-semibold uppercase tracking-[0.22em] text-ink transition-colors hover:bg-gallery-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-gold"
           >
-            Continue to admin
+            {isCustomerAccess ? "Continue to account" : "Continue to admin"}
           </button>
         </form>
       </section>

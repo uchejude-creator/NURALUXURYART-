@@ -3,17 +3,24 @@ import type { EmailOtpType } from "@supabase/supabase-js";
 
 import { createClient } from "@/lib/supabase/server";
 
-function getSafeNext(value: string | null) {
+function getSafeNext(value: string | null, fallback = "/admin") {
   if (!value || !value.startsWith("/") || value.startsWith("//")) {
-    return "/admin";
+    return fallback;
   }
 
   return value;
 }
 
-function getLoginRedirect(requestUrl: URL, error: string) {
-  const url = new URL("/admin/login", requestUrl.origin);
+function getFailurePath(next: string) {
+  return next.startsWith("/account") ? "/account/login" : "/admin/login";
+}
+
+function getLoginRedirect(requestUrl: URL, error: string, next: string) {
+  const url = new URL(getFailurePath(next), requestUrl.origin);
   url.searchParams.set("error", error);
+  if (next.startsWith("/account")) {
+    url.searchParams.set("next", next);
+  }
   return NextResponse.redirect(url);
 }
 
@@ -29,7 +36,7 @@ export async function GET(request: NextRequest) {
     requestUrl.searchParams.get("error_code");
 
   if (authError) {
-    return getLoginRedirect(requestUrl, authError);
+    return getLoginRedirect(requestUrl, authError, next);
   }
 
   const supabase = await createClient();
@@ -38,7 +45,7 @@ export async function GET(request: NextRequest) {
     const { error } = await supabase.auth.exchangeCodeForSession(code);
 
     if (error) {
-      return getLoginRedirect(requestUrl, "The sign-in link is invalid or has expired.");
+      return getLoginRedirect(requestUrl, "The sign-in link is invalid or has expired.", next);
     }
 
     return NextResponse.redirect(new URL(next, requestUrl.origin));
@@ -51,11 +58,17 @@ export async function GET(request: NextRequest) {
     });
 
     if (error) {
-      return getLoginRedirect(requestUrl, "The sign-in link is invalid or has expired.");
+      return getLoginRedirect(requestUrl, "The sign-in link is invalid or has expired.", next);
     }
 
     return NextResponse.redirect(new URL(next, requestUrl.origin));
   }
 
-  return getLoginRedirect(requestUrl, "Request a fresh admin sign-in link.");
+  return getLoginRedirect(
+    requestUrl,
+    next.startsWith("/account")
+      ? "Request a fresh sign-in link."
+      : "Request a fresh admin sign-in link.",
+    next,
+  );
 }
