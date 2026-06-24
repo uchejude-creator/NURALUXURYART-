@@ -23,8 +23,12 @@ export function isLocalOrigin(value: string | null) {
 }
 
 export function getPublicOrigin(requestOrigin: string | null) {
-  if (!requestOrigin || isLocalOrigin(requestOrigin)) {
+  if (!requestOrigin) {
     return getConfiguredSiteUrl();
+  }
+
+  if (isLocalOrigin(requestOrigin)) {
+    return process.env.NODE_ENV === "production" ? getConfiguredSiteUrl() : stripTrailingSlash(requestOrigin);
   }
 
   return stripTrailingSlash(requestOrigin);

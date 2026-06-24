@@ -2,8 +2,6 @@ import type { Metadata } from "next";
 import type { EmailOtpType } from "@supabase/supabase-js";
 import { redirect } from "next/navigation";
 
-import { createClient } from "@/lib/supabase/server";
-
 export const metadata: Metadata = {
   title: "Confirm Sign In",
   description: "Complete secure NURALUXURYART access.",
@@ -31,30 +29,6 @@ function getFailurePath(next: string) {
 
 function getFailureMessage(next: string, message: string) {
   return `${getFailurePath(next)}?error=${encodeURIComponent(message)}`;
-}
-
-async function confirmAuthLink(formData: FormData) {
-  "use server";
-
-  const tokenHash = String(formData.get("tokenHash") ?? "");
-  const type = String(formData.get("type") ?? "email") as EmailOtpType;
-  const next = getSafeNext(String(formData.get("next") ?? "/admin"));
-
-  if (!tokenHash) {
-    redirect(getFailureMessage(next, "Request a fresh sign-in link."));
-  }
-
-  const supabase = await createClient();
-  const { error } = await supabase.auth.verifyOtp({
-    token_hash: tokenHash,
-    type,
-  });
-
-  if (error) {
-    redirect(getFailureMessage(next, "The sign-in link is invalid or has expired."));
-  }
-
-  redirect(next);
 }
 
 export default async function AuthConfirmPage({ searchParams }: AuthConfirmPageProps) {
@@ -86,8 +60,8 @@ export default async function AuthConfirmPage({ searchParams }: AuthConfirmPageP
             : "Finish the admin login from this trusted browser. This extra click keeps email scanners from using the one-time link before you do."}
         </p>
 
-        <form action={confirmAuthLink} className="mt-8">
-          <input type="hidden" name="tokenHash" value={tokenHash} />
+        <form action="/auth/verify" method="post" className="mt-8">
+          <input type="hidden" name="token_hash" value={tokenHash} />
           <input type="hidden" name="type" value={type} />
           <input type="hidden" name="next" value={next} />
           <button
