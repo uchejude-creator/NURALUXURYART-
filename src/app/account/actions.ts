@@ -1,14 +1,18 @@
 "use server";
 
-import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
-import { getPublicOrigin } from "@/lib/site-url";
+import { getConfiguredSiteUrl } from "@/lib/site-url";
 import { createClient } from "@/lib/supabase/server";
 
 export type CustomerLoginState = {
   status: "idle" | "success" | "error";
+  message: string;
+};
+
+export type GoogleLoginState = {
+  status: "idle" | "error";
   message: string;
 };
 
@@ -26,13 +30,6 @@ function getSafeNext(value: FormDataEntryValue | string | null | undefined) {
   return next;
 }
 
-function getAccountLoginRedirect(error: string, next = "/account") {
-  const url = new URL("/account/login", "https://nuraluxuryart.com");
-  url.searchParams.set("error", error);
-  url.searchParams.set("next", getSafeNext(next));
-  return `${url.pathname}${url.search}`;
-}
-
 export async function sendCustomerLoginLink(
   _previousState: CustomerLoginState,
   formData: FormData,
@@ -48,8 +45,7 @@ export async function sendCustomerLoginLink(
   }
 
   const supabase = await createClient();
-  const requestHeaders = await headers();
-  const redirectOrigin = getPublicOrigin(requestHeaders.get("origin"));
+  const redirectOrigin = getConfiguredSiteUrl();
 
   const { error } = await supabase.auth.signInWithOtp({
     email,
@@ -74,24 +70,35 @@ export async function sendCustomerLoginLink(
   };
 }
 
-export async function signInWithGoogle(formData: FormData) {
-  const next = getSafeNext(formData.get("next"));
-  const supabase = await createClient();
-  const requestHeaders = await headers();
-  const redirectOrigin = getPublicOrigin(requestHeaders.get("origin"));
+export async function signInWithGoogleCredential(
+  credential: string,
+  nextValue: FormDataEntryValue | string | null | undefined = "/account",
+): Promise<GoogleLoginState> {
+  const next = getSafeNext(nextValue);
 
-  const { data, error } = await supabase.auth.signInWithOAuth({
-    provider: "google",
-    options: {
-      redirectTo: `${redirectOrigin}/auth/callback?next=${encodeURIComponent(next)}`,
-    },
-  });
-
-  if (error || !data.url) {
-    redirect(getAccountLoginRedirect("Google sign-in is not ready yet. Please use email sign-in.", next));
+  if (!credential) {
+    return {
+      status: "error",
+      message: "Google sign-in was cancelled. Please try again.",
+    };
   }
 
-  redirect(data.url);
+  const supabase = await createClient();
+
+  const { error } = await supabase.auth.signInWithIdToken({
+    provider: "google",
+    token: credential,
+  });
+
+  if (error) {
+    return {
+      status: "error",
+      message: "Google sign-in could not be completed. Please try again.",
+    };
+  }
+
+  revalidatePath("/", "layout");
+  redirect(next);
 }
 
 export async function signOutCustomer() {
