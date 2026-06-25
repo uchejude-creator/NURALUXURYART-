@@ -5,6 +5,8 @@ import { createClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
+const FALLBACK_EMAIL_TYPES: EmailOtpType[] = ["email", "signup"];
+
 function getSafeNext(value: string | null | undefined) {
   if (!value || !value.startsWith("/") || value.startsWith("//")) {
     return "/account";
@@ -32,6 +34,30 @@ function getFailureRedirect(requestUrl: URL, next: string, message: string) {
   return NextResponse.redirect(url);
 }
 
+function getCandidateTypes(type: EmailOtpType) {
+  return [type, ...FALLBACK_EMAIL_TYPES.filter((candidate) => candidate !== type)];
+}
+
+async function verifyOtpWithFallback(tokenHash: string, type: EmailOtpType) {
+  const supabase = await createClient();
+  let lastError: unknown = null;
+
+  for (const candidateType of getCandidateTypes(type)) {
+    const { error } = await supabase.auth.verifyOtp({
+      token_hash: tokenHash,
+      type: candidateType,
+    });
+
+    if (!error) {
+      return null;
+    }
+
+    lastError = error;
+  }
+
+  return lastError;
+}
+
 async function verifyAuthLink({
   requestUrl,
   tokenHash,
@@ -47,8 +73,7 @@ async function verifyAuthLink({
     return getFailureRedirect(requestUrl, next, "Request a fresh sign-in link.");
   }
 
-  const supabase = await createClient();
-  const { error } = await supabase.auth.verifyOtp({ token_hash: tokenHash, type });
+  const error = await verifyOtpWithFallback(tokenHash, type);
 
   if (error) {
     return getFailureRedirect(requestUrl, next, "The sign-in link is invalid or has expired.");

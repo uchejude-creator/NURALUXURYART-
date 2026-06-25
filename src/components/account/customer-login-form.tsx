@@ -1,17 +1,86 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 
-import {
-  sendCustomerLoginLink,
-  signInWithGoogle,
-  type CustomerLoginState,
-} from "@/app/account/actions";
+import { sendCustomerLoginLink, type CustomerLoginState } from "@/app/account/actions";
+import { createClient } from "@/lib/supabase/client";
 
 const initialState: CustomerLoginState = {
   status: "idle",
   message: "",
 };
+
+const GOOGLE_SCRIPT_SRC = "https://accounts.google.com/gsi/client";
+
+type GoogleCredentialResponse = {
+  credential?: string;
+};
+
+type GoogleAccounts = {
+  id: {
+    initialize: (options: {
+      client_id: string;
+      callback: (response: GoogleCredentialResponse) => void;
+      auto_select?: boolean;
+      cancel_on_tap_outside?: boolean;
+      use_fedcm_for_prompt?: boolean;
+    }) => void;
+    renderButton: (
+      parent: HTMLElement,
+      options: {
+        theme: "outline" | "filled_blue" | "filled_black";
+        size: "large" | "medium" | "small";
+        type: "standard" | "icon";
+        shape: "pill" | "rectangular" | "circle" | "square";
+        text: "continue_with" | "signin_with" | "signup_with";
+        logo_alignment: "left" | "center";
+        width: number;
+      },
+    ) => void;
+    cancel: () => void;
+  };
+};
+
+declare global {
+  interface Window {
+    google?: {
+      accounts: GoogleAccounts;
+    };
+  }
+}
+
+function loadGoogleIdentityScript() {
+  if (typeof window === "undefined") {
+    return Promise.resolve();
+  }
+
+  if (window.google?.accounts?.id) {
+    return Promise.resolve();
+  }
+
+  return new Promise<void>((resolve, reject) => {
+    const existingScript = document.querySelector<HTMLScriptElement>(
+      `script[src="${GOOGLE_SCRIPT_SRC}"]`,
+    );
+
+    if (existingScript) {
+      existingScript.addEventListener("load", () => resolve(), { once: true });
+      existingScript.addEventListener("error", () => reject(new Error("Google sign-in failed to load.")), {
+        once: true,
+      });
+      return;
+    }
+
+    const script = document.createElement("script");
+    script.src = GOOGLE_SCRIPT_SRC;
+    script.async = true;
+    script.defer = true;
+    script.onload = () => resolve();
+    script.onerror = () => reject(new Error("Google sign-in failed to load."));
+    document.head.appendChild(script);
+  });
+}
 
 type CustomerLoginFormProps = {
   error?: string;
@@ -21,42 +90,107 @@ type CustomerLoginFormProps = {
 
 export function CustomerLoginForm({ error, next = "/account", signedOut }: CustomerLoginFormProps) {
   const [state, formAction, pending] = useActionState(sendCustomerLoginLink, initialState);
+  const [googleMessage, setGoogleMessage] = useState("");
+  const googleButtonRef = useRef<HTMLDivElement>(null);
+  const router = useRouter();
+  const googleClientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID ?? "";
 
   const displayMessage =
     state.message ||
+    googleMessage ||
     error ||
     (signedOut ? "You have been signed out of your collector account." : "");
-  const displayStatus = state.message ? state.status : error ? "error" : signedOut ? "success" : "idle";
+  const displayStatus = state.message
+    ? state.status
+    : googleMessage || error
+      ? "error"
+      : signedOut
+        ? "success"
+        : "idle";
+
+  useEffect(() => {
+    if (!googleClientId || !googleButtonRef.current) {
+      return;
+    }
+
+    let mounted = true;
+
+    loadGoogleIdentityScript()
+      .then(() => {
+        if (!mounted || !window.google?.accounts?.id || !googleButtonRef.current) {
+          return;
+        }
+
+        googleButtonRef.current.innerHTML = "";
+        window.google.accounts.id.initialize({
+          client_id: googleClientId,
+          auto_select: false,
+          cancel_on_tap_outside: true,
+          use_fedcm_for_prompt: false,
+          callback: async (response) => {
+            setGoogleMessage("");
+
+            if (!response.credential) {
+              setGoogleMessage("Google sign-in could not be completed. Please try again.");
+              return;
+            }
+
+            const supabase = createClient();
+            const { error: signInError } = await supabase.auth.signInWithIdToken({
+              provider: "google",
+              token: response.credential,
+            });
+
+            if (signInError) {
+              setGoogleMessage("Google sign-in could not be completed. Please try again.");
+              return;
+            }
+
+            router.replace(next);
+            router.refresh();
+          },
+        });
+
+        const buttonWidth = Math.min(
+          Math.max(Math.floor(googleButtonRef.current.getBoundingClientRect().width), 280),
+          420,
+        );
+
+        window.google.accounts.id.renderButton(googleButtonRef.current, {
+          theme: "outline",
+          size: "large",
+          type: "standard",
+          shape: "pill",
+          text: "continue_with",
+          logo_alignment: "left",
+          width: buttonWidth,
+        });
+      })
+      .catch(() => {
+        if (mounted) {
+          setGoogleMessage("Google sign-in is not available right now. Please use email.");
+        }
+      });
+
+    return () => {
+      mounted = false;
+      window.google?.accounts?.id.cancel();
+    };
+  }, [googleClientId, next, router]);
 
   return (
     <div className="mt-8 space-y-5">
-      <form action={signInWithGoogle}>
-        <input type="hidden" name="next" value={next} />
-        <button
-          type="submit"
-          className="group flex min-h-13 w-full items-center justify-center gap-3 rounded-full border border-ink/15 bg-gallery-white px-6 text-sm font-semibold text-ink shadow-[0_18px_40px_rgba(25,24,21,0.06)] transition-colors hover:border-gold hover:bg-cream focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-gold"
-        >
-          <svg aria-hidden="true" viewBox="0 0 24 24" className="h-5 w-5">
-            <path
-              fill="#4285F4"
-              d="M21.6 12.23c0-.78-.07-1.53-.2-2.23H12v4.22h5.38a4.6 4.6 0 0 1-2 3.02v2.5h3.24c1.9-1.75 2.98-4.33 2.98-7.51Z"
-            />
-            <path
-              fill="#34A853"
-              d="M12 22c2.7 0 4.97-.9 6.62-2.26l-3.24-2.5c-.9.6-2.04.96-3.38.96-2.6 0-4.8-1.76-5.6-4.12H3.05v2.58A10 10 0 0 0 12 22Z"
-            />
-            <path
-              fill="#FBBC05"
-              d="M6.4 14.08A6 6 0 0 1 6.08 12c0-.72.12-1.42.32-2.08V7.34H3.05A10 10 0 0 0 2 12c0 1.61.39 3.14 1.05 4.66l3.35-2.58Z"
-            />
-            <path
-              fill="#EA4335"
-              d="M12 5.8c1.47 0 2.8.51 3.84 1.5l2.86-2.86A9.57 9.57 0 0 0 12 2a10 10 0 0 0-8.95 5.34L6.4 9.92C7.2 7.56 9.4 5.8 12 5.8Z"
-            />
-          </svg>
-          <span>Continue with Google</span>
-        </button>
-      </form>
+      {googleClientId ? (
+        <div
+          ref={googleButtonRef}
+          className="flex min-h-13 w-full items-center justify-center rounded-full bg-gallery-white"
+          aria-label="Continue with Google"
+        />
+      ) : (
+        <p className="rounded-card border border-gold/30 bg-gold/10 px-4 py-3 text-sm text-ink">
+          Google sign-in is being configured. Please use email.
+        </p>
+      )}
 
       <div className="flex items-center gap-4">
         <span className="h-px flex-1 bg-ink/12" />

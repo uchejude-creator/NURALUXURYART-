@@ -1,10 +1,10 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
 
 import { getConfiguredSiteUrl } from "@/lib/site-url";
 import { createClient } from "@/lib/supabase/server";
+import { redirect } from "next/navigation";
 
 export type CustomerLoginState = {
   status: "idle" | "success" | "error";
@@ -45,7 +45,7 @@ export async function sendCustomerLoginLink(
   const { error } = await supabase.auth.signInWithOtp({
     email,
     options: {
-      emailRedirectTo: `${redirectOrigin}/auth/confirm?next=${encodeURIComponent(next)}`,
+      emailRedirectTo: `${redirectOrigin}/auth/callback?next=${encodeURIComponent(next)}`,
       shouldCreateUser: true,
     },
   });
@@ -63,29 +63,6 @@ export async function sendCustomerLoginLink(
     status: "success",
     message: "Check your email for the secure sign-in link.",
   };
-}
-
-export async function signInWithGoogle(formData: FormData) {
-  const next = getSafeNext(formData.get("next"));
-  const supabase = await createClient();
-  const redirectOrigin = getConfiguredSiteUrl();
-
-  const { data, error } = await supabase.auth.signInWithOAuth({
-    provider: "google",
-    options: {
-      redirectTo: `${redirectOrigin}/auth/callback?next=${encodeURIComponent(next)}`,
-      queryParams: {
-        access_type: "offline",
-        prompt: "select_account",
-      },
-    },
-  });
-
-  if (error || !data.url) {
-    redirect("/account/login?error=Google%20sign-in%20could%20not%20be%20started.%20Please%20try%20again.");
-  }
-
-  redirect(data.url);
 }
 
 export async function signOutCustomer() {

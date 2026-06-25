@@ -35,6 +35,24 @@ function getFailureMessage(next: string, message: string) {
   return `${getFailurePath(next)}?error=${encodeURIComponent(message)}`;
 }
 
+function getVerifyPath({
+  tokenHash,
+  type,
+  next,
+}: {
+  tokenHash: string;
+  type: EmailOtpType;
+  next: string;
+}) {
+  const searchParams = new URLSearchParams({
+    token_hash: tokenHash,
+    type,
+    next,
+  });
+
+  return `/auth/verify?${searchParams.toString()}`;
+}
+
 export default async function AuthConfirmPage({ searchParams }: AuthConfirmPageProps) {
   const params = await searchParams;
   const tokenHash = params?.token_hash ?? "";
@@ -44,6 +62,10 @@ export default async function AuthConfirmPage({ searchParams }: AuthConfirmPageP
 
   if (!tokenHash) {
     redirect(getFailureMessage(next, "Request a fresh sign-in link."));
+  }
+
+  if (isCustomerAccess) {
+    redirect(getVerifyPath({ tokenHash, type, next }));
   }
 
   return (

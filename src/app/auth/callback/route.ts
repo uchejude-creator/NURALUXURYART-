@@ -3,6 +3,8 @@ import type { EmailOtpType } from "@supabase/supabase-js";
 
 import { createClient } from "@/lib/supabase/server";
 
+const FALLBACK_EMAIL_TYPES: EmailOtpType[] = ["email", "signup"];
+
 function getSafeNext(value: string | null, fallback = "/account") {
   if (!value || !value.startsWith("/") || value.startsWith("//")) {
     return fallback;
@@ -26,6 +28,10 @@ function getLoginRedirect(requestUrl: URL, error: string, next: string) {
     url.searchParams.set("next", next);
   }
   return NextResponse.redirect(url);
+}
+
+function getCandidateTypes(type: EmailOtpType) {
+  return [type, ...FALLBACK_EMAIL_TYPES.filter((candidate) => candidate !== type)];
 }
 
 export async function GET(request: NextRequest) {
@@ -56,16 +62,24 @@ export async function GET(request: NextRequest) {
   }
 
   if (tokenHash && type) {
-    const { error } = await supabase.auth.verifyOtp({
-      token_hash: tokenHash,
-      type,
-    });
+    let lastError: unknown = null;
 
-    if (error) {
-      return getLoginRedirect(requestUrl, "The sign-in link is invalid or has expired.", next);
+    for (const candidateType of getCandidateTypes(type)) {
+      const { error } = await supabase.auth.verifyOtp({
+        token_hash: tokenHash,
+        type: candidateType,
+      });
+
+      if (!error) {
+        return NextResponse.redirect(new URL(next, requestUrl.origin));
+      }
+
+      lastError = error;
     }
 
-    return NextResponse.redirect(new URL(next, requestUrl.origin));
+    if (lastError) {
+      return getLoginRedirect(requestUrl, "The sign-in link is invalid or has expired.", next);
+    }
   }
 
   return getLoginRedirect(
