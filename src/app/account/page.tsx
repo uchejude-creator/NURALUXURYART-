@@ -22,6 +22,41 @@ function getDisplayName(metadata: Record<string, unknown> | undefined, email?: s
   return email?.split("@")[0] ?? "Collector";
 }
 
+type CheckoutRequestSummary = {
+  id: string;
+  created_at: string | null;
+  currency: string | null;
+  item_count: number | null;
+  status: string | null;
+  total_amount: number | null;
+  delivery_city: string | null;
+  delivery_state: string | null;
+};
+
+function formatCurrency(amount: number | null, currency = "NGN") {
+  if (typeof amount !== "number") {
+    return "Available on request";
+  }
+
+  return new Intl.NumberFormat("en-NG", {
+    currency,
+    maximumFractionDigits: 0,
+    style: "currency",
+  }).format(amount);
+}
+
+function formatDate(value: string | null) {
+  if (!value) {
+    return "Recently submitted";
+  }
+
+  return new Intl.DateTimeFormat("en-NG", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  }).format(new Date(value));
+}
+
 export default async function AccountPage() {
   const supabase = await createClient();
   const {
@@ -33,6 +68,16 @@ export default async function AccountPage() {
   }
 
   const displayName = getDisplayName(user.user_metadata as Record<string, unknown> | undefined, user.email);
+  const collectorEmail = user.email?.toLowerCase() ?? "";
+  const { data: checkoutRequests, error: checkoutRequestsError } = collectorEmail
+    ? await supabase
+        .from("checkout_requests")
+        .select("id,created_at,currency,item_count,status,total_amount,delivery_city,delivery_state")
+        .eq("customer_email", collectorEmail)
+        .order("created_at", { ascending: false })
+        .limit(5)
+    : { data: [] as CheckoutRequestSummary[], error: null };
+  const recentRequests = (checkoutRequests ?? []) as CheckoutRequestSummary[];
 
   return (
     <main className="bg-cream px-6 pb-20 pt-32 text-ink sm:px-10 lg:px-16 lg:pt-40">
@@ -68,6 +113,68 @@ export default async function AccountPage() {
             </form>
           </div>
         </div>
+
+        <section className="mt-8 rounded-card border border-ink/10 bg-gallery-white p-7 shadow-[0_20px_70px_rgba(25,24,21,0.05)] lg:p-9">
+          <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.3em] text-gold">
+                Order Requests
+              </p>
+              <h2 className="mt-4 font-serif text-4xl font-light leading-tight sm:text-5xl">
+                Recent collector activity
+              </h2>
+            </div>
+            <Link
+              href={routes.checkout}
+              className="text-xs font-semibold uppercase tracking-[0.22em] text-ink underline decoration-gold/40 underline-offset-8 transition-colors hover:text-gold"
+            >
+              Review cart
+            </Link>
+          </div>
+
+          {checkoutRequestsError ? (
+            <p className="mt-6 rounded-card border border-gold/30 bg-gold/10 px-4 py-3 text-sm leading-6 text-stone">
+              Your account is connected. Once customer order access is enabled in the database, requests
+              made with {collectorEmail} will appear here.
+            </p>
+          ) : recentRequests.length > 0 ? (
+            <div className="mt-7 grid gap-4">
+              {recentRequests.map((request) => (
+                <article
+                  key={request.id}
+                  className="grid gap-4 rounded-card border border-ink/10 bg-cream p-5 md:grid-cols-[1fr_auto] md:items-center"
+                >
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-[0.24em] text-stone">
+                      Request {request.id.slice(0, 8)} · {formatDate(request.created_at)}
+                    </p>
+                    <h3 className="mt-3 font-serif text-3xl font-light">
+                      {request.item_count ?? 1} selected artwork{request.item_count === 1 ? "" : "s"}
+                    </h3>
+                    <p className="mt-2 text-sm leading-6 text-stone">
+                      {request.delivery_city && request.delivery_state
+                        ? `${request.delivery_city}, ${request.delivery_state}`
+                        : "Delivery details received"}
+                    </p>
+                  </div>
+                  <div className="md:text-right">
+                    <p className="font-semibold text-ink">
+                      {formatCurrency(request.total_amount, request.currency ?? "NGN")}
+                    </p>
+                    <p className="mt-2 text-xs font-semibold uppercase tracking-[0.22em] text-gold">
+                      {request.status ?? "new"}
+                    </p>
+                  </div>
+                </article>
+              ))}
+            </div>
+          ) : (
+            <p className="mt-6 rounded-card border border-ink/10 bg-cream px-5 py-4 text-sm leading-6 text-stone">
+              Checkout requests made with {collectorEmail} will appear here, so your future art
+              enquiries and delivery details stay close to your collector account.
+            </p>
+          )}
+        </section>
 
         <div className="mt-8 grid gap-4 md:grid-cols-3">
           <Link

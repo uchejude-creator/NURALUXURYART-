@@ -3,7 +3,7 @@ import type { EmailOtpType } from "@supabase/supabase-js";
 
 import { createClient } from "@/lib/supabase/server";
 
-function getSafeNext(value: string | null, fallback = "/admin") {
+function getSafeNext(value: string | null, fallback = "/account") {
   if (!value || !value.startsWith("/") || value.startsWith("//")) {
     return fallback;
   }
@@ -11,14 +11,18 @@ function getSafeNext(value: string | null, fallback = "/admin") {
   return value;
 }
 
+function isAdminNext(next: string) {
+  return next === "/admin" || next.startsWith("/admin/");
+}
+
 function getFailurePath(next: string) {
-  return next.startsWith("/account") ? "/account/login" : "/admin/login";
+  return isAdminNext(next) ? "/admin/login" : "/account/login";
 }
 
 function getLoginRedirect(requestUrl: URL, error: string, next: string) {
   const url = new URL(getFailurePath(next), requestUrl.origin);
   url.searchParams.set("error", error);
-  if (next.startsWith("/account")) {
+  if (!isAdminNext(next)) {
     url.searchParams.set("next", next);
   }
   return NextResponse.redirect(url);
@@ -66,9 +70,7 @@ export async function GET(request: NextRequest) {
 
   return getLoginRedirect(
     requestUrl,
-    next.startsWith("/account")
-      ? "Request a fresh sign-in link."
-      : "Request a fresh admin sign-in link.",
+    isAdminNext(next) ? "Request a fresh admin sign-in link." : "Request a fresh sign-in link.",
     next,
   );
 }

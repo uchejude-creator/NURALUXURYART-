@@ -1,61 +1,17 @@
 "use client";
 
-import Script from "next/script";
-import { useActionState, useCallback, useEffect, useRef, useState, useTransition } from "react";
+import { useActionState } from "react";
 
 import {
   sendCustomerLoginLink,
-  signInWithGoogleCredential,
+  signInWithGoogle,
   type CustomerLoginState,
-  type GoogleLoginState,
 } from "@/app/account/actions";
 
 const initialState: CustomerLoginState = {
   status: "idle",
   message: "",
 };
-
-const initialGoogleState: GoogleLoginState = {
-  status: "idle",
-  message: "",
-};
-
-const googleClientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
-
-type GoogleCredentialResponse = {
-  credential?: string;
-};
-
-type GoogleAccounts = {
-  accounts: {
-    id: {
-      cancel: () => void;
-      initialize: (options: {
-        auto_select?: boolean;
-        cancel_on_tap_outside?: boolean;
-        callback: (response: GoogleCredentialResponse) => void;
-        client_id: string;
-      }) => void;
-      renderButton: (
-        parent: HTMLElement,
-        options: {
-          logo_alignment?: "left" | "center";
-          shape?: "pill" | "rectangular" | "circle" | "square";
-          size?: "large" | "medium" | "small";
-          text?: "signin_with" | "signup_with" | "continue_with" | "signin";
-          theme?: "outline" | "filled_blue" | "filled_black";
-          width?: number;
-        },
-      ) => void;
-    };
-  };
-};
-
-declare global {
-  interface Window {
-    google?: GoogleAccounts;
-  }
-}
 
 type CustomerLoginFormProps = {
   error?: string;
@@ -65,71 +21,6 @@ type CustomerLoginFormProps = {
 
 export function CustomerLoginForm({ error, next = "/account", signedOut }: CustomerLoginFormProps) {
   const [state, formAction, pending] = useActionState(sendCustomerLoginLink, initialState);
-  const [googleState, setGoogleState] = useState(initialGoogleState);
-  const [googleReady, setGoogleReady] = useState(false);
-  const [googlePending, startGoogleTransition] = useTransition();
-  const googleButtonRef = useRef<HTMLDivElement>(null);
-
-  const handleGoogleCredential = useCallback(
-    (response: GoogleCredentialResponse) => {
-      const credential = response.credential ?? "";
-
-      if (!credential) {
-        setGoogleState({
-          status: "error",
-          message: "Google sign-in was cancelled. Please try again.",
-        });
-        return;
-      }
-
-      startGoogleTransition(() => {
-        setGoogleState(initialGoogleState);
-
-        void signInWithGoogleCredential(credential, next)
-          .then((result) => {
-            if (result?.status === "error") {
-              setGoogleState(result);
-            }
-          })
-          .catch(() => {
-            setGoogleState({
-              status: "error",
-              message: "Google sign-in could not be completed. Please try again.",
-            });
-          });
-      });
-    },
-    [next],
-  );
-
-  useEffect(() => {
-    if (!googleClientId || !googleReady || !googleButtonRef.current || !window.google?.accounts.id) {
-      return;
-    }
-
-    const buttonHost = googleButtonRef.current;
-    buttonHost.innerHTML = "";
-
-    window.google.accounts.id.initialize({
-      auto_select: false,
-      cancel_on_tap_outside: true,
-      callback: handleGoogleCredential,
-      client_id: googleClientId,
-    });
-
-    window.google.accounts.id.renderButton(buttonHost, {
-      logo_alignment: "center",
-      shape: "pill",
-      size: "large",
-      text: "continue_with",
-      theme: "outline",
-      width: Math.min(buttonHost.offsetWidth || 420, 420),
-    });
-
-    return () => {
-      window.google?.accounts.id.cancel();
-    };
-  }, [googleReady, handleGoogleCredential]);
 
   const displayMessage =
     state.message ||
@@ -139,32 +30,33 @@ export function CustomerLoginForm({ error, next = "/account", signedOut }: Custo
 
   return (
     <div className="mt-8 space-y-5">
-      {googleClientId ? (
-        <>
-          <Script src="https://accounts.google.com/gsi/client" async defer onLoad={() => setGoogleReady(true)} />
-          <div className="rounded-full border border-ink/15 bg-gallery-white px-2 py-1 transition-colors hover:border-gold focus-within:outline focus-within:outline-2 focus-within:outline-offset-4 focus-within:outline-gold">
-            <div
-              ref={googleButtonRef}
-              className="flex min-h-11 w-full justify-center [&>div]:!w-full [&_iframe]:!mx-auto [&_iframe]:!w-full"
+      <form action={signInWithGoogle}>
+        <input type="hidden" name="next" value={next} />
+        <button
+          type="submit"
+          className="group flex min-h-13 w-full items-center justify-center gap-3 rounded-full border border-ink/15 bg-gallery-white px-6 text-sm font-semibold text-ink shadow-[0_18px_40px_rgba(25,24,21,0.06)] transition-colors hover:border-gold hover:bg-cream focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-gold"
+        >
+          <svg aria-hidden="true" viewBox="0 0 24 24" className="h-5 w-5">
+            <path
+              fill="#4285F4"
+              d="M21.6 12.23c0-.78-.07-1.53-.2-2.23H12v4.22h5.38a4.6 4.6 0 0 1-2 3.02v2.5h3.24c1.9-1.75 2.98-4.33 2.98-7.51Z"
             />
-          </div>
-          {googlePending ? (
-            <p className="text-center text-xs font-semibold uppercase tracking-[0.18em] text-stone/70">
-              Completing Google sign-in...
-            </p>
-          ) : null}
-        </>
-      ) : (
-        <div className="rounded-card border border-gold/30 bg-gold/10 px-4 py-3 text-sm leading-6 text-ink">
-          Google sign-in needs the public Google client ID before it can go live.
-        </div>
-      )}
-
-      {googleState.message ? (
-        <p className="rounded-card border border-red-200 bg-red-50 px-4 py-3 text-sm leading-6 text-red-900">
-          {googleState.message}
-        </p>
-      ) : null}
+            <path
+              fill="#34A853"
+              d="M12 22c2.7 0 4.97-.9 6.62-2.26l-3.24-2.5c-.9.6-2.04.96-3.38.96-2.6 0-4.8-1.76-5.6-4.12H3.05v2.58A10 10 0 0 0 12 22Z"
+            />
+            <path
+              fill="#FBBC05"
+              d="M6.4 14.08A6 6 0 0 1 6.08 12c0-.72.12-1.42.32-2.08V7.34H3.05A10 10 0 0 0 2 12c0 1.61.39 3.14 1.05 4.66l3.35-2.58Z"
+            />
+            <path
+              fill="#EA4335"
+              d="M12 5.8c1.47 0 2.8.51 3.84 1.5l2.86-2.86A9.57 9.57 0 0 0 12 2a10 10 0 0 0-8.95 5.34L6.4 9.92C7.2 7.56 9.4 5.8 12 5.8Z"
+            />
+          </svg>
+          <span>Continue with Google</span>
+        </button>
+      </form>
 
       <div className="flex items-center gap-4">
         <span className="h-px flex-1 bg-ink/12" />

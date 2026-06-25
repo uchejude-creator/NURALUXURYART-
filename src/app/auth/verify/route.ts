@@ -7,21 +7,25 @@ export const dynamic = "force-dynamic";
 
 function getSafeNext(value: string | null | undefined) {
   if (!value || !value.startsWith("/") || value.startsWith("//")) {
-    return "/admin";
+    return "/account";
   }
 
   return value;
 }
 
+function isAdminNext(next: string) {
+  return next === "/admin" || next.startsWith("/admin/");
+}
+
 function getFailurePath(next: string) {
-  return next.startsWith("/account") ? "/account/login" : "/admin/login";
+  return isAdminNext(next) ? "/admin/login" : "/account/login";
 }
 
 function getFailureRedirect(requestUrl: URL, next: string, message: string) {
   const url = new URL(getFailurePath(next), requestUrl.origin);
   url.searchParams.set("error", message);
 
-  if (next.startsWith("/account")) {
+  if (!isAdminNext(next)) {
     url.searchParams.set("next", next);
   }
 
@@ -65,7 +69,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   const requestUrl = new URL(request.url);
   const formData = await request.formData();
-  const next = getSafeNext(String(formData.get("next") ?? "/admin"));
+  const next = getSafeNext(String(formData.get("next") ?? "/account"));
   const tokenHash = String(formData.get("token_hash") ?? formData.get("tokenHash") ?? "");
   const type = String(formData.get("type") ?? "email") as EmailOtpType;
 

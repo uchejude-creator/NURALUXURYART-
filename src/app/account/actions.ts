@@ -11,11 +11,6 @@ export type CustomerLoginState = {
   message: string;
 };
 
-export type GoogleLoginState = {
-  status: "idle" | "error";
-  message: string;
-};
-
 function cleanText(value: FormDataEntryValue | null, maxLength: number) {
   return typeof value === "string" ? value.trim().slice(0, maxLength) : "";
 }
@@ -70,35 +65,27 @@ export async function sendCustomerLoginLink(
   };
 }
 
-export async function signInWithGoogleCredential(
-  credential: string,
-  nextValue: FormDataEntryValue | string | null | undefined = "/account",
-): Promise<GoogleLoginState> {
-  const next = getSafeNext(nextValue);
-
-  if (!credential) {
-    return {
-      status: "error",
-      message: "Google sign-in was cancelled. Please try again.",
-    };
-  }
-
+export async function signInWithGoogle(formData: FormData) {
+  const next = getSafeNext(formData.get("next"));
   const supabase = await createClient();
+  const redirectOrigin = getConfiguredSiteUrl();
 
-  const { error } = await supabase.auth.signInWithIdToken({
+  const { data, error } = await supabase.auth.signInWithOAuth({
     provider: "google",
-    token: credential,
+    options: {
+      redirectTo: `${redirectOrigin}/auth/callback?next=${encodeURIComponent(next)}`,
+      queryParams: {
+        access_type: "offline",
+        prompt: "select_account",
+      },
+    },
   });
 
-  if (error) {
-    return {
-      status: "error",
-      message: "Google sign-in could not be completed. Please try again.",
-    };
+  if (error || !data.url) {
+    redirect("/account/login?error=Google%20sign-in%20could%20not%20be%20started.%20Please%20try%20again.");
   }
 
-  revalidatePath("/", "layout");
-  redirect(next);
+  redirect(data.url);
 }
 
 export async function signOutCustomer() {

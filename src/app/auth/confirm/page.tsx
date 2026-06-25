@@ -17,14 +17,18 @@ type AuthConfirmPageProps = {
 
 function getSafeNext(value: string | null | undefined) {
   if (!value || !value.startsWith("/") || value.startsWith("//")) {
-    return "/admin";
+    return "/account";
   }
 
   return value;
 }
 
+function isAdminNext(next: string) {
+  return next === "/admin" || next.startsWith("/admin/");
+}
+
 function getFailurePath(next: string) {
-  return next.startsWith("/account") ? "/account/login" : "/admin/login";
+  return isAdminNext(next) ? "/admin/login" : "/account/login";
 }
 
 function getFailureMessage(next: string, message: string) {
@@ -36,7 +40,7 @@ export default async function AuthConfirmPage({ searchParams }: AuthConfirmPageP
   const tokenHash = params?.token_hash ?? "";
   const next = getSafeNext(params?.next);
   const type = params?.type ?? "email";
-  const isCustomerAccess = next.startsWith("/account");
+  const isCustomerAccess = !isAdminNext(next);
 
   if (!tokenHash) {
     redirect(getFailureMessage(next, "Request a fresh sign-in link."));
