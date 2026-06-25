@@ -7,14 +7,20 @@ import { createClient } from "@/lib/supabase/client";
 
 function getSafeNext(value: string | null) {
   if (!value || !value.startsWith("/") || value.startsWith("//")) {
-    return "/admin";
+    return "/account";
   }
 
   return value;
 }
 
-function redirectToLogin(error: string) {
-  window.location.replace(`/admin/login?error=${encodeURIComponent(error)}`);
+function isAdminNext(next: string) {
+  return next === "/admin" || next.startsWith("/admin/");
+}
+
+function redirectToLogin(next: string, error: string) {
+  const loginPath = isAdminNext(next) ? "/admin/login" : "/account/login";
+
+  window.location.replace(`${loginPath}?error=${encodeURIComponent(error)}`);
 }
 
 export function AdminAuthLinkRedirect() {
@@ -33,7 +39,7 @@ export function AdminAuthLinkRedirect() {
     const refreshToken = hashParams.get("refresh_token");
 
     if (hashError) {
-      redirectToLogin(hashError);
+      redirectToLogin(next, hashError);
       return;
     }
 
@@ -74,7 +80,7 @@ export function AdminAuthLinkRedirect() {
       }
 
       if (error) {
-        redirectToLogin("The sign-in link is invalid or has expired.");
+        redirectToLogin(next, "The sign-in link is invalid or has expired.");
         return;
       }
 
