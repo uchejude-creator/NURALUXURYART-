@@ -42,6 +42,32 @@ export const metadata: Metadata = {
     "gallery art",
     "collectible artwork",
   ],
+  icons: {
+    icon: "/favicon.png",
+    shortcut: "/favicon.png",
+    apple: siteConfig.logo,
+  },
+  openGraph: {
+    type: "website",
+    url: siteConfig.url,
+    siteName: siteConfig.name,
+    title: "NURALUXURYART | Luxury Hand-Painted Art",
+    description: siteConfig.description,
+    images: [
+      {
+        url: siteConfig.ogImage,
+        width: 1200,
+        height: 1200,
+        alt: "NURALUXURYART gold logo mark",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "NURALUXURYART | Luxury Hand-Painted Art",
+    description: siteConfig.description,
+    images: [siteConfig.ogImage],
+  },
 };
 
 export default function RootLayout({

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { ArtworkGallery } from "@/components/artwork/artwork-gallery";
 import { ShareArtworkButton } from "@/components/artwork/share-artwork-button";
 import { AddToCartButton } from "@/components/cart/add-to-cart-button";
+import { siteConfig } from "@/config/site";
 import { getArtworkGalleryImages } from "@/lib/artwork-gallery";
 import { getArtworkBySlug, getFallbackArtworkSlugs } from "@/lib/catalog";
 import { formatCurrency } from "@/lib/format";
@@ -27,9 +28,32 @@ export async function generateMetadata({ params }: ArtworkPageProps) {
     return {};
   }
 
+  const [primaryImage] = getArtworkGalleryImages(artwork);
+  const previewImage = primaryImage?.src ?? siteConfig.ogImage;
+  const description = `${artwork.title} by NURALUXURYART. ${artwork.medium}.`;
+
   return {
     title: artwork.title,
-    description: `${artwork.title} by NURALUXURYART. ${artwork.medium}.`,
+    description,
+    openGraph: {
+      title: `${artwork.title} | NURALUXURYART`,
+      description,
+      url: routes.artwork(artwork.slug),
+      siteName: siteConfig.name,
+      images: [
+        {
+          url: previewImage,
+          alt: `${artwork.title} from NURALUXURYART`,
+        },
+      ],
+      type: "website",
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: `${artwork.title} | NURALUXURYART`,
+      description,
+      images: [previewImage],
+    },
   };
 }
 

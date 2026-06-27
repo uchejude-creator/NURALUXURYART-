@@ -80,14 +80,14 @@ export default async function AccountPage() {
   const recentRequests = (checkoutRequests ?? []) as CheckoutRequestSummary[];
 
   return (
-    <main className="bg-cream px-6 pb-20 pt-32 text-ink sm:px-10 lg:px-16 lg:pt-40">
+    <main className="overflow-x-hidden bg-cream px-5 pb-20 pt-32 text-ink sm:px-10 lg:px-16 lg:pt-40">
       <section className="mx-auto max-w-site">
-        <div className="grid gap-8 rounded-card border border-ink/10 bg-gallery-white p-7 shadow-[0_28px_90px_rgba(25,24,21,0.08)] lg:grid-cols-[1.05fr_0.95fr] lg:p-10">
-          <div>
+        <div className="grid w-full min-w-0 gap-8 overflow-hidden rounded-card border border-ink/10 bg-gallery-white p-6 shadow-[0_28px_90px_rgba(25,24,21,0.08)] sm:p-7 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)] lg:p-10">
+          <div className="min-w-0">
             <p className="text-xs font-semibold uppercase tracking-[0.34em] text-gold">
               Collector Account
             </p>
-            <h1 className="mt-6 font-serif text-5xl font-light leading-none sm:text-7xl">
+            <h1 className="mt-6 break-words font-serif text-4xl font-light leading-[0.98] sm:text-6xl lg:text-7xl">
               Welcome, {displayName}.
             </h1>
             <p className="mt-6 max-w-2xl text-sm leading-7 text-stone">
@@ -96,17 +96,17 @@ export default async function AccountPage() {
             </p>
           </div>
 
-          <div className="rounded-card border border-ink/10 bg-cream p-6">
+          <div className="min-w-0 rounded-card border border-ink/10 bg-cream p-5 sm:p-6">
             <p className="text-xs font-semibold uppercase tracking-[0.24em] text-stone">
               Signed in as
             </p>
-            <p className="mt-3 break-words font-serif text-3xl leading-tight text-ink">
+            <p className="mt-3 break-all font-serif text-2xl leading-tight text-ink [overflow-wrap:anywhere] sm:text-3xl lg:text-4xl">
               {user.email}
             </p>
             <form action={signOutCustomer} className="mt-6">
               <button
                 type="submit"
-                className="min-h-12 rounded-full border border-ink/20 px-7 text-xs font-semibold uppercase tracking-[0.2em] text-ink transition-colors hover:border-gold hover:text-stone focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-gold"
+                className="min-h-12 w-full rounded-full border border-ink/20 px-7 text-xs font-semibold uppercase tracking-[0.2em] text-ink transition-colors hover:border-gold hover:text-stone focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-gold sm:w-auto"
               >
                 Sign out
               </button>

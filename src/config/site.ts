@@ -3,6 +3,8 @@ export const siteConfig = {
   url: "https://nuraluxuryart.com",
   description:
     "Luxury hand-painted artworks from Turkey, curated for refined interiors, collectors, and gallery-led spaces.",
+  logo: "/images/brand/nuraluxuryart-logo.png",
+  ogImage: "/images/brand/nuraluxuryart-logo.png",
   tagline: "Hand-painted in Turkey, curated for the world.",
   locale: "en",
   currency: "NGN",

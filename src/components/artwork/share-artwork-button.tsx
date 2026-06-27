@@ -20,7 +20,8 @@ export function ShareArtworkButton({ path, title }: ShareArtworkButtonProps) {
     return new URL(path, window.location.origin).toString();
   }, [path]);
 
-  const encodedShareText = encodeURIComponent(`View ${title} from NURALUXURYART: ${artworkUrl}`);
+  const shareText = `View ${title} from NURALUXURYART: ${artworkUrl}`;
+  const encodedShareText = encodeURIComponent(shareText);
   const whatsappShareUrl = `https://wa.me/?text=${encodedShareText}`;
   const xShareUrl = `https://twitter.com/intent/tweet?text=${encodedShareText}`;
 
