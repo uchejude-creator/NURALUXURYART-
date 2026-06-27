@@ -12,6 +12,7 @@ import {
 } from "react";
 
 import type { Artwork } from "@/types/artwork";
+import { dispatchBrowserEvent } from "@/lib/browser-compat";
 
 const CART_STORAGE_KEY = "nuraluxuryart-cart-v1";
 const CART_CHANGE_EVENT = "nuraluxuryart-cart-change";
@@ -95,8 +96,13 @@ function writeStoredCartItems(items: CartItem[]) {
     return;
   }
 
-  window.localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(items));
-  window.dispatchEvent(new Event(CART_CHANGE_EVENT));
+  try {
+    window.localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(items));
+  } catch {
+    // Private browsing or restricted storage should not break the shopping UI.
+  }
+
+  dispatchBrowserEvent(CART_CHANGE_EVENT);
 }
 
 function artworkToCartItem(artwork: Artwork): CartItem {

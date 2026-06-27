@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 
+import { copyTextToClipboard } from "@/lib/browser-compat";
+
 type CopyReviewLinkButtonProps = {
   link: string;
 };
@@ -10,14 +12,16 @@ export function CopyReviewLinkButton({ link }: CopyReviewLinkButtonProps) {
   const [label, setLabel] = useState("Copy link");
 
   async function copyLink() {
-    try {
-      await navigator.clipboard.writeText(link);
+    const copied = await copyTextToClipboard(link);
+
+    if (copied) {
       setLabel("Copied");
       window.setTimeout(() => setLabel("Copy link"), 1800);
-    } catch {
-      setLabel("Copy failed");
-      window.setTimeout(() => setLabel("Copy link"), 1800);
+      return;
     }
+
+    setLabel("Copy failed");
+    window.setTimeout(() => setLabel("Copy link"), 1800);
   }
 
   return (

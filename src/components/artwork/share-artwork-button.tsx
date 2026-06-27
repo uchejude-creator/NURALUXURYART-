@@ -2,6 +2,8 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 
+import { copyTextToClipboard } from "@/lib/browser-compat";
+
 type ShareArtworkButtonProps = {
   path: string;
   title: string;
@@ -53,13 +55,15 @@ export function ShareArtworkButton({ path, title }: ShareArtworkButtonProps) {
   }
 
   async function copyLink() {
-    try {
-      await navigator.clipboard.writeText(artworkUrl);
+    const copied = await copyTextToClipboard(artworkUrl);
+
+    if (copied) {
       showMessage("Link copied");
       setIsOpen(false);
-    } catch {
-      showMessage("Copy unavailable");
+      return;
     }
+
+    showMessage("Copy unavailable");
   }
 
   async function openNativeShare() {

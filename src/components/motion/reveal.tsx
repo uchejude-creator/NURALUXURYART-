@@ -18,6 +18,12 @@ export function Reveal({ children, className = "" }: RevealProps) {
       return;
     }
 
+    if (typeof globalThis.IntersectionObserver === "undefined") {
+      const fallbackTimer = globalThis.setTimeout(() => setIsVisible(true), 0);
+
+      return () => globalThis.clearTimeout(fallbackTimer);
+    }
+
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting) {

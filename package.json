@@ -8,6 +8,16 @@
     "start": "next start",
     "lint": "eslint"
   },
+  "browserslist": [
+    "last 2 Chrome versions",
+    "last 2 Firefox versions",
+    "last 2 Safari versions",
+    "last 2 Edge versions",
+    "iOS >= 14",
+    "Android >= 8",
+    "not dead",
+    "not op_mini all"
+  ],
   "dependencies": {
     "@supabase/ssr": "^0.12.0",
     "@supabase/supabase-js": "^2.108.0",
