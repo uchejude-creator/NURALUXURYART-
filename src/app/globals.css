@@ -85,6 +85,26 @@ body:has([data-workspace-shell]) aside[aria-label="Shopping cart"] {
   animation-play-state: paused;
 }
 
+.testimonial-review-card {
+  background-color: rgba(255, 250, 242, 0.96);
+  color: #191815;
+}
+
+.testimonial-review-text {
+  color: #191815 !important;
+  -webkit-text-fill-color: #191815;
+  display: block;
+  visibility: visible;
+  opacity: 1 !important;
+  transform: none;
+  filter: none;
+  clip-path: none;
+  -webkit-mask-image: none;
+  mask-image: none;
+  font-size: clamp(1.875rem, 8vw, 2.75rem);
+  line-height: 1.08;
+}
+
 .testimonial-mobile-stage {
   min-height: 22rem;
 }

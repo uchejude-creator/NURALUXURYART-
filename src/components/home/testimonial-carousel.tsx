@@ -38,11 +38,11 @@ function TestimonialCard({
   return (
     <article
       aria-hidden={isDuplicate}
-      className="flex min-h-72 w-full shrink-0 flex-col justify-between rounded-card border border-gallery-white/10 bg-gallery-white/[0.045] p-6 shadow-[0_24px_80px_rgba(0,0,0,0.24)] sm:w-[24rem] lg:w-[28rem]"
+      className="testimonial-review-card flex min-h-72 w-full shrink-0 flex-col justify-between rounded-card border border-gallery-white/10 bg-gallery-white/[0.045] p-6 shadow-[0_24px_80px_rgba(0,0,0,0.24)] sm:w-[24rem] lg:w-[28rem]"
     >
       <div>
         <StarRating rating={testimonial.rating} />
-        <blockquote className="mt-7 font-serif text-3xl font-light leading-tight text-gallery-white sm:text-4xl">
+        <blockquote className="testimonial-review-text mt-7 font-serif text-3xl font-light leading-tight text-gallery-white sm:text-4xl">
           &ldquo;{testimonial.quote}&rdquo;
         </blockquote>
       </div>
