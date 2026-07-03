@@ -32,6 +32,7 @@ export function AdminAuthLinkRedirect() {
     const code = url.searchParams.get("code");
     const tokenHash = url.searchParams.get("token_hash");
     const type = url.searchParams.get("type") ?? "email";
+    const isConfirmationPage = url.pathname === "/auth/confirm";
     const hashParams = new URLSearchParams(url.hash.replace(/^#/, ""));
     const hashError =
       hashParams.get("error_description") ?? hashParams.get("error") ?? url.searchParams.get("error");
@@ -43,7 +44,7 @@ export function AdminAuthLinkRedirect() {
       return;
     }
 
-    if (code) {
+    if (code && !isConfirmationPage) {
       const callbackUrl = new URL("/auth/callback", window.location.origin);
       callbackUrl.searchParams.set("code", code);
       callbackUrl.searchParams.set("next", next);
@@ -51,7 +52,7 @@ export function AdminAuthLinkRedirect() {
       return;
     }
 
-    if (tokenHash) {
+    if (tokenHash && !isConfirmationPage) {
       const confirmUrl = new URL("/auth/confirm", window.location.origin);
       confirmUrl.searchParams.set("token_hash", tokenHash);
       confirmUrl.searchParams.set("type", type);

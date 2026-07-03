@@ -47,7 +47,7 @@ export async function sendCustomerLoginLink(
   const { error } = await supabase.auth.signInWithOtp({
     email,
     options: {
-      emailRedirectTo: `${redirectOrigin}/auth/callback?next=${encodeURIComponent(next)}`,
+      emailRedirectTo: `${redirectOrigin}/auth/confirm?next=${encodeURIComponent(next)}`,
       shouldCreateUser: true,
     },
   });

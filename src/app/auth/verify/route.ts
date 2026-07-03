@@ -58,17 +58,36 @@ async function verifyOtpWithFallback(tokenHash: string, type: EmailOtpType) {
   return lastError;
 }
 
+async function exchangeCodeForSession(code: string) {
+  const supabase = await createClient();
+  const { error } = await supabase.auth.exchangeCodeForSession(code);
+
+  return error;
+}
+
 async function verifyAuthLink({
+  code,
   requestUrl,
   tokenHash,
   type,
   next,
 }: {
+  code?: string;
   requestUrl: URL;
   tokenHash: string;
   type: EmailOtpType;
   next: string;
 }) {
+  if (code) {
+    const error = await exchangeCodeForSession(code);
+
+    if (error) {
+      return getFailureRedirect(requestUrl, next, "The sign-in link is invalid or has expired.");
+    }
+
+    return NextResponse.redirect(new URL(next, requestUrl.origin));
+  }
+
   if (!tokenHash) {
     return getFailureRedirect(requestUrl, next, "Request a fresh sign-in link.");
   }
@@ -85,18 +104,31 @@ async function verifyAuthLink({
 export async function GET(request: NextRequest) {
   const requestUrl = new URL(request.url);
   const next = getSafeNext(requestUrl.searchParams.get("next"));
+  const code = requestUrl.searchParams.get("code") ?? "";
   const tokenHash = requestUrl.searchParams.get("token_hash") ?? "";
   const type = (requestUrl.searchParams.get("type") ?? "email") as EmailOtpType;
+  const confirmUrl = new URL("/auth/confirm", requestUrl.origin);
+  confirmUrl.searchParams.set("next", next);
 
-  return verifyAuthLink({ requestUrl, tokenHash, type, next });
+  if (code) {
+    confirmUrl.searchParams.set("code", code);
+  }
+
+  if (tokenHash) {
+    confirmUrl.searchParams.set("token_hash", tokenHash);
+    confirmUrl.searchParams.set("type", type);
+  }
+
+  return NextResponse.redirect(confirmUrl);
 }
 
 export async function POST(request: NextRequest) {
   const requestUrl = new URL(request.url);
   const formData = await request.formData();
   const next = getSafeNext(String(formData.get("next") ?? "/account"));
+  const code = String(formData.get("code") ?? "");
   const tokenHash = String(formData.get("token_hash") ?? formData.get("tokenHash") ?? "");
   const type = String(formData.get("type") ?? "email") as EmailOtpType;
 
-  return verifyAuthLink({ requestUrl, tokenHash, type, next });
+  return verifyAuthLink({ code, requestUrl, tokenHash, type, next });
 }
