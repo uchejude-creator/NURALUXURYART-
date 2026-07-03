@@ -5,7 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
-const FALLBACK_EMAIL_TYPES: EmailOtpType[] = ["email", "signup"];
+const FALLBACK_EMAIL_TYPES: EmailOtpType[] = ["email", "signup", "magiclink"];
 
 function getSafeNext(value: string | null | undefined) {
   if (!value || !value.startsWith("/") || value.startsWith("//")) {

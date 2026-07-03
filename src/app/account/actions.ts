@@ -1,10 +1,11 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-
-import { getConfiguredSiteUrl } from "@/lib/site-url";
-import { createClient } from "@/lib/supabase/server";
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
+
+import { getPublicOrigin } from "@/lib/site-url";
+import { createClient } from "@/lib/supabase/server";
 
 export type CustomerLoginState = {
   status: "idle" | "success" | "error";
@@ -40,7 +41,8 @@ export async function sendCustomerLoginLink(
   }
 
   const supabase = await createClient();
-  const redirectOrigin = getConfiguredSiteUrl();
+  const requestHeaders = await headers();
+  const redirectOrigin = getPublicOrigin(requestHeaders.get("origin"));
 
   const { error } = await supabase.auth.signInWithOtp({
     email,

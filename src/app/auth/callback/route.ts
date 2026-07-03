@@ -3,7 +3,7 @@ import type { EmailOtpType } from "@supabase/supabase-js";
 
 import { createClient } from "@/lib/supabase/server";
 
-const FALLBACK_EMAIL_TYPES: EmailOtpType[] = ["email", "signup"];
+const FALLBACK_EMAIL_TYPES: EmailOtpType[] = ["email", "signup", "magiclink"];
 
 function getSafeNext(value: string | null, fallback = "/account") {
   if (!value || !value.startsWith("/") || value.startsWith("//")) {
