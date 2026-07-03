@@ -56,8 +56,8 @@ export default async function AccountLoginPage({ searchParams }: AccountLoginPag
             Continue as a NURALUXURYART collector.
           </h2>
           <p className="mt-4 text-sm leading-7 text-stone">
-            Use the same email you use for enquiries or checkout requests so future order details
-            can be connected cleanly.
+            Use Google for quick, dependable collector access. You can still checkout without an
+            account whenever you prefer.
           </p>
 
           <CustomerLoginForm
@@ -67,8 +67,8 @@ export default async function AccountLoginPage({ searchParams }: AccountLoginPag
           />
 
           <p className="mt-7 text-xs leading-6 text-stone/75">
-            By continuing, you agree to receive a secure one-time sign-in link from NURALUXURYART.
-            For purchase questions, visit{" "}
+            By continuing with Google, you can view collector account details connected to your
+            sign-in. For purchase questions, visit{" "}
             <Link href={routes.contact} className="font-semibold text-ink underline">
               Contact
             </Link>
