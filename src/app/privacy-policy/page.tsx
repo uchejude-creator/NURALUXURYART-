@@ -19,7 +19,7 @@ const sections = [
   },
   {
     title: "Checkout and payments",
-    body: "Checkout requests are used to prepare a collector order before payment. When Paystack payment is connected, payment details will be handled by Paystack and its secure payment systems.",
+    body: "Checkout requests are used to prepare a collector order before payment. Priced selections are paid through Paystack, and payment details are handled by Paystack and its secure payment systems.",
   },
   {
     title: "Service providers",

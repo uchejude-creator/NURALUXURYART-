@@ -6,6 +6,7 @@ export const routes = {
   account: "/account",
   accountLogin: "/account/login",
   checkout: "/checkout",
+  checkoutComplete: "/checkout/complete",
   contact: "/contact",
   review: (token: string) => `/reviews/${token}`,
   authenticity: "/authenticity",

@@ -27,6 +27,8 @@ type CheckoutRequestSummary = {
   created_at: string | null;
   currency: string | null;
   item_count: number | null;
+  payment_status: string | null;
+  payment_provider: string | null;
   status: string | null;
   total_amount: number | null;
   delivery_city: string | null;
@@ -57,6 +59,10 @@ function formatDate(value: string | null) {
   }).format(new Date(value));
 }
 
+function formatStatus(value: string | null) {
+  return (value ?? "new").replaceAll("_", " ");
+}
+
 export default async function AccountPage() {
   const supabase = await createClient();
   const {
@@ -72,7 +78,9 @@ export default async function AccountPage() {
   const { data: checkoutRequests, error: checkoutRequestsError } = collectorEmail
     ? await supabase
         .from("checkout_requests")
-        .select("id,created_at,currency,item_count,status,total_amount,delivery_city,delivery_state")
+        .select(
+          "id,created_at,currency,item_count,payment_provider,payment_status,status,total_amount,delivery_city,delivery_state",
+        )
         .eq("customer_email", collectorEmail)
         .order("created_at", { ascending: false })
         .limit(5)
@@ -162,8 +170,13 @@ export default async function AccountPage() {
                       {formatCurrency(request.total_amount, request.currency ?? "NGN")}
                     </p>
                     <p className="mt-2 text-xs font-semibold uppercase tracking-[0.22em] text-gold">
-                      {request.status ?? "new"}
+                      {formatStatus(request.status)}
                     </p>
+                    {request.payment_provider === "paystack" ? (
+                      <p className="mt-2 text-xs font-semibold uppercase tracking-[0.22em] text-stone">
+                        Paystack {formatStatus(request.payment_status)}
+                      </p>
+                    ) : null}
                   </div>
                 </article>
               ))}

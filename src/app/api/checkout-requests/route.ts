@@ -1,6 +1,16 @@
 import { NextResponse } from "next/server";
 
 import { sendCheckoutRequestEmails } from "@/lib/email/templates";
+import {
+  createPaystackReference,
+  hasPaystackConfig,
+  initializePaystackTransaction,
+  toPaystackSubunit,
+} from "@/lib/paystack";
+import { routes } from "@/lib/routes";
+import { getPublicOrigin } from "@/lib/site-url";
+import { getSupabaseAdminClient, hasSupabaseAdminConfig } from "@/lib/supabase/admin";
+import { createClient } from "@/lib/supabase/server";
 
 type CheckoutItemInput = {
   id?: unknown;
@@ -28,6 +38,17 @@ type CheckoutPayload = {
   items?: CheckoutItemInput[];
 };
 
+type NormalizedCheckoutItem = {
+  request_id: string;
+  artwork_id: string;
+  artwork_slug: string;
+  title: string;
+  medium: string;
+  price: number | null;
+  quantity: number;
+  image_src: string | null;
+};
+
 const DELIVERY_OPTIONS = new Set([
   "Lagos delivery",
   "Pickup or gallery consultation",
@@ -45,6 +66,9 @@ const SUPABASE_PUBLISHABLE_KEY =
   "sb_publishable_-G9JTK2ef--s_X0UE-ipSg_BAQeJ_PT";
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
 
 function cleanText(value: unknown, maxLength: number) {
   return typeof value === "string" ? value.trim().slice(0, maxLength) : "";
@@ -82,6 +106,93 @@ async function insertIntoSupabase(table: string, body: unknown) {
   if (!response.ok) {
     const detail = await response.text();
     throw new Error(detail || `Failed to insert ${table}`);
+  }
+}
+
+function isPaystackPayable(totalAmount: number, checkoutItems: NormalizedCheckoutItem[]) {
+  return totalAmount > 0 && checkoutItems.every((item) => item.price !== null);
+}
+
+function renderCheckoutItemsSummary(checkoutItems: NormalizedCheckoutItem[]) {
+  return checkoutItems
+    .map((item) => `${item.title} x ${item.quantity}`)
+    .join(", ")
+    .slice(0, 160);
+}
+
+async function addPaystackPaymentToCheckoutRequest({
+  accessCode,
+  amountSubunit,
+  authorizationUrl,
+  reference,
+  requestId,
+}: {
+  accessCode: string;
+  amountSubunit: number;
+  authorizationUrl: string;
+  reference: string;
+  requestId: string;
+}) {
+  const supabaseAdmin = getSupabaseAdminClient();
+  const { error } = await supabaseAdmin
+    .from("checkout_requests")
+    .update({
+      payment_amount_subunit: amountSubunit,
+      payment_currency: "NGN",
+      payment_provider: "paystack",
+      payment_status: "initialized",
+      paystack_access_code: accessCode,
+      paystack_authorization_url: authorizationUrl,
+      paystack_reference: reference,
+    })
+    .eq("id", requestId);
+
+  if (error) {
+    throw error;
+  }
+}
+
+async function saveAuthenticatedCustomerProfile(customer: {
+  address: string;
+  city: string;
+  country: string;
+  deliveryNotes: string;
+  email: string;
+  fullName: string;
+  phone: string;
+  state: string;
+}) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser();
+
+  if (userError) {
+    console.warn("Unable to read checkout customer session", userError);
+  }
+
+  if (!user) {
+    return;
+  }
+
+  const { error } = await supabase.from("customer_profiles").upsert(
+    {
+      address: customer.address,
+      city: customer.city,
+      country: customer.country,
+      delivery_notes: customer.deliveryNotes,
+      email: customer.email,
+      full_name: customer.fullName,
+      phone: customer.phone,
+      state: customer.state,
+      user_id: user.id,
+    },
+    { onConflict: "user_id" },
+  );
+
+  if (error) {
+    throw error;
   }
 }
 
@@ -166,9 +277,9 @@ export async function POST(request: Request) {
         price,
         quantity,
         image_src: cleanText(item.imageSrc, 500) || null,
-      };
+      } satisfies NormalizedCheckoutItem;
     })
-    .filter((item): item is NonNullable<typeof item> => item !== null);
+    .filter((item): item is NormalizedCheckoutItem => item !== null);
 
   if (checkoutItems.length === 0) {
     return errorResponse("The selected artworks could not be verified.");
@@ -179,8 +290,38 @@ export async function POST(request: Request) {
     (sum, item) => sum + (item.price ?? 0) * item.quantity,
     0,
   );
+  const paystackPayable = isPaystackPayable(totalAmount, checkoutItems);
+  const paystackAmount = paystackPayable ? toPaystackSubunit(totalAmount) : null;
+
+  if (paystackPayable && !hasPaystackConfig()) {
+    return errorResponse(
+      "Paystack checkout is not configured yet. Please contact us to complete this purchase.",
+      503,
+    );
+  }
+
+  if (paystackPayable && !hasSupabaseAdminConfig()) {
+    return errorResponse(
+      "Payment confirmation is not configured yet. Please contact us to complete this purchase.",
+      503,
+    );
+  }
+
+  let authorizationUrl: string | null = null;
+  let paystackReference: string | null = null;
 
   try {
+    await saveAuthenticatedCustomerProfile({
+      address: deliveryAddress,
+      city: deliveryCity,
+      country: deliveryCountry,
+      deliveryNotes: deliveryNote,
+      email: customerEmail,
+      fullName: customerName,
+      phone: customerPhone,
+      state: deliveryState,
+    });
+
     await insertIntoSupabase("checkout_requests", {
       id: requestId,
       customer_name: customerName,
@@ -201,9 +342,51 @@ export async function POST(request: Request) {
     });
 
     await insertIntoSupabase("checkout_request_items", checkoutItems);
+
+    if (paystackPayable && paystackAmount) {
+      const publicOrigin = getPublicOrigin(request.headers.get("origin"));
+      const initializedTransaction = await initializePaystackTransaction({
+        amount: paystackAmount,
+        callbackUrl: `${publicOrigin}${routes.checkoutComplete}`,
+        email: customerEmail,
+        metadata: {
+          cancel_action: `${publicOrigin}${routes.checkout}`,
+          checkout_request_id: requestId,
+          custom_fields: [
+            {
+              display_name: "Checkout Request",
+              value: requestId,
+              variable_name: "checkout_request_id",
+            },
+            {
+              display_name: "Collector",
+              value: customerName,
+              variable_name: "collector_name",
+            },
+            {
+              display_name: "Selected Artworks",
+              value: renderCheckoutItemsSummary(checkoutItems),
+              variable_name: "selected_artworks",
+            },
+          ],
+        },
+        reference: createPaystackReference(requestId),
+      });
+
+      authorizationUrl = initializedTransaction.authorization_url;
+      paystackReference = initializedTransaction.reference;
+
+      await addPaystackPaymentToCheckoutRequest({
+        accessCode: initializedTransaction.access_code,
+        amountSubunit: paystackAmount,
+        authorizationUrl,
+        reference: paystackReference,
+        requestId,
+      });
+    }
   } catch (error) {
     console.error(error);
-    return errorResponse("We could not save your checkout request. Please try again.", 500);
+    return errorResponse("We could not prepare your checkout request. Please try again.", 500);
   }
 
   await sendCheckoutRequestEmails({
@@ -219,8 +402,18 @@ export async function POST(request: Request) {
     deliveryLandmark: deliveryLandmark || null,
     deliveryNote: deliveryNote || null,
     items: checkoutItems,
+    paymentUrl: authorizationUrl,
+    paystackReference,
     totalAmount,
   });
 
-  return NextResponse.json({ requestId });
+  return NextResponse.json({
+    authorizationUrl,
+    message: authorizationUrl
+      ? "Your secure Paystack checkout is ready."
+      : "Your request has been saved. We will confirm availability and payment details with you.",
+    paymentRequired: Boolean(authorizationUrl),
+    reference: paystackReference,
+    requestId,
+  });
 }

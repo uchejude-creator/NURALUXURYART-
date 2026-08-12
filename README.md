@@ -23,7 +23,49 @@ npm run build
 - Tailwind CSS
 - Supabase Auth, Postgres, and Storage
 - Vercel production deployment
-- Planned: Paystack checkout
+- Paystack checkout
+
+## Paystack Checkout
+
+Priced checkout selections now initialize Paystack from the server, redirect the
+collector to Paystack, verify the callback at `/checkout/complete`, and receive
+Paystack `charge.success` webhooks at `/api/paystack/webhook`.
+
+Manual setup before deploying the payment flow:
+
+1. In Supabase, apply:
+
+```text
+supabase/migrations/20260722090000_add_paystack_checkout_fields.sql
+```
+
+You can paste the SQL into the Supabase SQL Editor if the Supabase CLI is not
+installed.
+
+2. In Vercel Project Settings > Environment Variables, add:
+
+```text
+PAYSTACK_SECRET_KEY=your_paystack_secret_key
+SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
+NEXT_PUBLIC_SITE_URL=https://nuraluxuryart.com
+SITE_URL=https://nuraluxuryart.com
+```
+
+Keep `PAYSTACK_SECRET_KEY` and `SUPABASE_SERVICE_ROLE_KEY` server-only. Do not
+prefix either value with `NEXT_PUBLIC_`.
+
+3. In Paystack Dashboard, set the webhook URL to:
+
+```text
+https://nuraluxuryart.com/api/paystack/webhook
+```
+
+4. Test with Paystack test mode first. After a full test order succeeds, replace
+the test secret key with the live secret key in Vercel and redeploy.
+
+Artwork selections with any item marked `Available on request` remain
+request-only, so the team can confirm price, availability, and delivery before
+taking payment.
 
 ## Supabase Auth Notes
 

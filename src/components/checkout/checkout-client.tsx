@@ -11,8 +11,28 @@ import { routes } from "@/lib/routes";
 type SubmitState =
   | { status: "idle" }
   | { status: "submitting" }
-  | { status: "success"; requestId: string }
+  | { status: "success"; message: string; requestId: string; reference?: string | null }
   | { status: "error"; message: string };
+
+type CheckoutResponse = {
+  authorizationUrl?: string | null;
+  error?: string;
+  message?: string;
+  paymentRequired?: boolean;
+  reference?: string | null;
+  requestId?: string;
+};
+
+export type CheckoutProfile = {
+  full_name: string | null;
+  email: string | null;
+  phone: string | null;
+  address: string | null;
+  city: string | null;
+  state: string | null;
+  country: string | null;
+  delivery_notes: string | null;
+};
 
 const deliveryOptions = [
   "Lagos delivery",
@@ -20,9 +40,23 @@ const deliveryOptions = [
   "Outside Lagos delivery",
 ] as const;
 
-export function CheckoutClient() {
+type CheckoutClientProps = {
+  savedProfile?: CheckoutProfile | null;
+};
+
+export function CheckoutClient({ savedProfile }: CheckoutClientProps) {
   const { clearCart, decrementItem, incrementItem, itemCount, items, removeItem, total } = useCart();
   const [submitState, setSubmitState] = useState<SubmitState>({ status: "idle" });
+  const profileDefaults = {
+    address: savedProfile?.address ?? "",
+    city: savedProfile?.city ?? "",
+    country: savedProfile?.country ?? "Nigeria",
+    deliveryNotes: savedProfile?.delivery_notes ?? "",
+    email: savedProfile?.email ?? "",
+    fullName: savedProfile?.full_name ?? "",
+    phone: savedProfile?.phone ?? "",
+    state: savedProfile?.state ?? "",
+  };
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -54,17 +88,35 @@ export function CheckoutClient() {
         }),
       });
 
-      const result = (await response.json()) as { requestId?: string; error?: string };
+      const result = (await response.json()) as CheckoutResponse;
 
       if (!response.ok || !result.requestId) {
-        throw new Error(result.error ?? "We could not save your checkout request.");
+        throw new Error(result.error ?? "We could not prepare your checkout request.");
       }
 
-      setSubmitState({ status: "success", requestId: result.requestId });
+      if (result.authorizationUrl) {
+        setSubmitState({
+          status: "success",
+          message: "Your secure Paystack checkout is ready. Redirecting now...",
+          reference: result.reference,
+          requestId: result.requestId,
+        });
+        window.location.assign(result.authorizationUrl);
+        return;
+      }
+
+      setSubmitState({
+        status: "success",
+        message:
+          result.message ??
+          "Your selection has been saved. We will confirm availability and payment details.",
+        reference: result.reference,
+        requestId: result.requestId,
+      });
     } catch (error) {
       setSubmitState({
         status: "error",
-        message: error instanceof Error ? error.message : "We could not save your checkout request.",
+        message: error instanceof Error ? error.message : "We could not prepare your checkout request.",
       });
     }
   }
@@ -81,7 +133,7 @@ export function CheckoutClient() {
           </h1>
           <p className="mx-auto mt-6 max-w-xl text-base leading-8 text-stone">
             Add artworks from the gallery and return here to review your selection before
-            requesting payment details.
+            starting secure checkout.
           </p>
           <Link
             href="/#featured-artworks"
@@ -104,8 +156,8 @@ export function CheckoutClient() {
               Review Your Selection
             </h1>
             <p className="mt-6 max-w-2xl text-base leading-8 text-stone">
-              Confirm the artworks you are interested in and share the delivery
-              details we need before final payment is prepared.
+              Confirm the artworks you are interested in, share delivery details,
+              and continue to secure Paystack payment when pricing is confirmed.
             </p>
 
             <ul className="mt-10 space-y-6">
@@ -176,8 +228,8 @@ export function CheckoutClient() {
                 <span className="font-semibold text-gallery-white">{formatCurrency(total)}</span>
               </div>
               <p className="text-xs leading-5 text-gallery-white/55">
-                Availability, delivery handling, and final payment guidance will
-                be confirmed before Paystack payment is requested.
+                Priced selections continue to Paystack immediately. Pieces marked
+                available on request are saved for collector care confirmation.
               </p>
             </div>
 
@@ -193,6 +245,7 @@ export function CheckoutClient() {
                   id="checkout-name"
                   name="name"
                   required
+                  defaultValue={profileDefaults.fullName}
                   className="mt-2 min-h-12 w-full border border-gallery-white/25 bg-transparent px-4 text-sm outline-none transition-colors focus:border-gold"
                 />
               </div>
@@ -208,6 +261,7 @@ export function CheckoutClient() {
                   name="email"
                   type="email"
                   required
+                  defaultValue={profileDefaults.email}
                   className="mt-2 min-h-12 w-full border border-gallery-white/25 bg-transparent px-4 text-sm outline-none transition-colors focus:border-gold"
                 />
               </div>
@@ -222,6 +276,7 @@ export function CheckoutClient() {
                   id="checkout-phone"
                   name="phone"
                   required
+                  defaultValue={profileDefaults.phone}
                   className="mt-2 min-h-12 w-full border border-gallery-white/25 bg-transparent px-4 text-sm outline-none transition-colors focus:border-gold"
                 />
               </div>
@@ -256,7 +311,7 @@ export function CheckoutClient() {
                     id="checkout-delivery-country"
                     name="deliveryCountry"
                     required
-                    defaultValue="Nigeria"
+                    defaultValue={profileDefaults.country}
                     className="mt-2 min-h-12 w-full border border-gallery-white/25 bg-transparent px-4 text-sm outline-none transition-colors focus:border-gold"
                   />
                 </div>
@@ -271,6 +326,7 @@ export function CheckoutClient() {
                     id="checkout-delivery-state"
                     name="deliveryState"
                     required
+                    defaultValue={profileDefaults.state}
                     placeholder="Lagos"
                     className="mt-2 min-h-12 w-full border border-gallery-white/25 bg-transparent px-4 text-sm outline-none transition-colors placeholder:text-gallery-white/35 focus:border-gold"
                   />
@@ -287,6 +343,7 @@ export function CheckoutClient() {
                   id="checkout-delivery-city"
                   name="deliveryCity"
                   required
+                  defaultValue={profileDefaults.city}
                   placeholder="Ikoyi, Lekki, Victoria Island..."
                   className="mt-2 min-h-12 w-full border border-gallery-white/25 bg-transparent px-4 text-sm outline-none transition-colors placeholder:text-gallery-white/35 focus:border-gold"
                 />
@@ -303,6 +360,7 @@ export function CheckoutClient() {
                   name="deliveryAddress"
                   required
                   rows={3}
+                  defaultValue={profileDefaults.address}
                   className="mt-2 w-full resize-none border border-gallery-white/25 bg-transparent px-4 py-3 text-sm outline-none transition-colors placeholder:text-gallery-white/35 focus:border-gold"
                   placeholder="Street address, building name, apartment, or delivery location"
                 />
@@ -332,6 +390,7 @@ export function CheckoutClient() {
                   id="checkout-note"
                   name="note"
                   rows={4}
+                  defaultValue={profileDefaults.deliveryNotes}
                   className="mt-2 w-full resize-none border border-gallery-white/25 bg-transparent px-4 py-3 text-sm outline-none transition-colors focus:border-gold"
                   placeholder="Preferred delivery timing, room context, custom request, or question"
                 />
@@ -342,8 +401,8 @@ export function CheckoutClient() {
                 className="flex min-h-13 w-full items-center justify-center rounded-full bg-gold px-8 text-xs font-semibold uppercase tracking-[0.22em] text-ink transition-colors hover:bg-gallery-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-gold"
               >
                 {submitState.status === "submitting"
-                  ? "Saving Selection..."
-                  : "Request Checkout Details"}
+                  ? "Preparing Paystack..."
+                  : "Pay Securely With Paystack"}
               </button>
               <button
                 type="button"
@@ -354,9 +413,15 @@ export function CheckoutClient() {
               </button>
               {submitState.status === "success" ? (
                 <p className="rounded-card border border-gold/35 bg-gold/10 px-4 py-3 text-sm leading-6 text-gallery-white">
-                  Your selection has been saved. Request reference:{" "}
+                  {submitState.message} Request reference:{" "}
                   <span className="font-semibold">{submitState.requestId.slice(0, 8)}</span>.
-                  We will confirm delivery and payment details before Paystack payment.
+                  {submitState.reference ? (
+                    <>
+                      {" "}
+                      Paystack reference:{" "}
+                      <span className="font-semibold">{submitState.reference}</span>.
+                    </>
+                  ) : null}
                 </p>
               ) : null}
               {submitState.status === "error" ? (

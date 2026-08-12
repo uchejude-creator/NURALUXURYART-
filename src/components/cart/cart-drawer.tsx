@@ -134,7 +134,7 @@ export function CartDrawer() {
             Continue to checkout
           </Link>
           <p className="mt-4 text-center text-xs leading-5 text-stone">
-            Paystack checkout will be connected after the purchase flow is approved.
+            Priced selections continue to secure Paystack checkout.
           </p>
         </div>
       </aside>

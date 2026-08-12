@@ -28,6 +28,15 @@ type CheckoutRequest = {
   delivery_landmark: string | null;
   delivery_note: string | null;
   item_count: number;
+  paid_at: string | null;
+  payment_amount_subunit: number | null;
+  payment_currency: string | null;
+  payment_provider: string | null;
+  payment_status: string | null;
+  payment_verified_at: string | null;
+  paystack_channel: string | null;
+  paystack_gateway_response: string | null;
+  paystack_reference: string | null;
   total_amount: number;
   currency: "NGN";
   status: string;
@@ -67,11 +76,27 @@ function formatStatus(status: string) {
   return status.replaceAll("_", " ");
 }
 
+function formatPaymentStatus(status: string | null) {
+  return formatStatus(status ?? "not_started");
+}
+
 function formatDate(value: string) {
   return new Intl.DateTimeFormat("en", {
     dateStyle: "medium",
     timeStyle: "short",
   }).format(new Date(value));
+}
+
+function formatMaybeDate(value: string | null) {
+  return value ? formatDate(value) : "Not recorded";
+}
+
+function formatPaymentAmount(amountSubunit: number | null, currency: string | null) {
+  if (typeof amountSubunit !== "number") {
+    return "Not recorded";
+  }
+
+  return formatCurrency(Math.round(amountSubunit / 100), currency ?? "NGN");
 }
 
 export default async function AdminOrdersPage() {
@@ -81,7 +106,7 @@ export default async function AdminOrdersPage() {
   const { data: requestsData } = await supabase
     .from("checkout_requests")
     .select(
-      "id,customer_name,customer_email,customer_phone,delivery_preference,delivery_country,delivery_state,delivery_city,delivery_address,delivery_landmark,delivery_note,item_count,total_amount,currency,status,source,created_at",
+      "id,customer_name,customer_email,customer_phone,delivery_preference,delivery_country,delivery_state,delivery_city,delivery_address,delivery_landmark,delivery_note,item_count,paid_at,payment_amount_subunit,payment_currency,payment_provider,payment_status,payment_verified_at,paystack_channel,paystack_gateway_response,paystack_reference,total_amount,currency,status,source,created_at",
     )
     .order("created_at", { ascending: false })
     .limit(80);
@@ -152,6 +177,11 @@ export default async function AdminOrdersPage() {
                       <span className="rounded-full bg-gold px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-ink">
                         {formatStatus(request.status)}
                       </span>
+                      {request.payment_provider === "paystack" ? (
+                        <span className="rounded-full border border-gallery-white/15 px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-gallery-white/70">
+                          Paystack {formatPaymentStatus(request.payment_status)}
+                        </span>
+                      ) : null}
                       <span className="text-xs uppercase tracking-[0.2em] text-gallery-white/45">
                         {formatDate(request.created_at)}
                       </span>
@@ -298,6 +328,39 @@ export default async function AdminOrdersPage() {
                         </div>
                       ))}
                     </dl>
+
+                    <div className="mt-6 border-t border-gallery-white/10 pt-5">
+                      <p className="text-xs font-semibold uppercase tracking-[0.26em] text-gold">
+                        Payment
+                      </p>
+                      <dl className="mt-5 space-y-4 text-sm">
+                        {[
+                          ["Provider", request.payment_provider ?? "none"],
+                          ["Status", formatPaymentStatus(request.payment_status)],
+                          [
+                            "Verified amount",
+                            formatPaymentAmount(
+                              request.payment_amount_subunit,
+                              request.payment_currency,
+                            ),
+                          ],
+                          ["Reference", request.paystack_reference],
+                          ["Channel", request.paystack_channel],
+                          ["Gateway", request.paystack_gateway_response],
+                          ["Paid at", formatMaybeDate(request.paid_at)],
+                          ["Verified at", formatMaybeDate(request.payment_verified_at)],
+                        ].map(([label, value]) => (
+                          <div key={label}>
+                            <dt className="text-xs uppercase tracking-[0.2em] text-gallery-white/35">
+                              {label}
+                            </dt>
+                            <dd className="mt-1 break-words leading-6 text-gallery-white/72">
+                              {value || "Not recorded"}
+                            </dd>
+                          </div>
+                        ))}
+                      </dl>
+                    </div>
                   </div>
                 </div>
               </article>

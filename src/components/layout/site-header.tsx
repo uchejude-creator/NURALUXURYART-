@@ -2,13 +2,13 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { MouseEvent, useEffect, useRef, useState } from "react";
 
 import { siteConfig } from "@/config/site";
 import { useCart } from "@/components/cart/cart-context";
 import { routes } from "@/lib/routes";
 
-function BrandWordmark({ onClick }: { onClick?: () => void }) {
+function BrandWordmark({ onClick }: { onClick?: (event: MouseEvent<HTMLAnchorElement>) => void }) {
   return (
     <Link
       href="/"
@@ -30,6 +30,26 @@ export function SiteHeader() {
   const pathname = usePathname();
   const { itemCount, isCartOpen, openCart } = useCart();
   const isHomePage = pathname === "/";
+
+  const scrollToTop = () => {
+    try {
+      window.scrollTo({ top: 0, left: 0, behavior: "instant" });
+    } catch {
+      window.scrollTo(0, 0);
+    }
+  };
+
+  const handleBrandClick = (event: MouseEvent<HTMLAnchorElement>) => {
+    setIsMenuOpen(false);
+    setIsHeaderHidden(false);
+
+    if (!isHomePage) {
+      return;
+    }
+
+    event.preventDefault();
+    scrollToTop();
+  };
 
   useEffect(() => {
     const handleScroll = () => {
@@ -70,7 +90,7 @@ export function SiteHeader() {
       }`}
     >
       <div className="relative z-20 mx-auto flex h-20 max-w-site items-center justify-between px-7 sm:px-10 lg:h-24 lg:px-16">
-        <BrandWordmark />
+        <BrandWordmark onClick={handleBrandClick} />
 
         <nav aria-label="Primary navigation" className="hidden items-center gap-10 md:flex">
           {siteConfig.nav.map((item) => (

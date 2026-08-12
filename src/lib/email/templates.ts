@@ -22,6 +22,8 @@ type CheckoutEmailInput = {
   deliveryLandmark: string | null;
   deliveryNote: string | null;
   items: CheckoutEmailItem[];
+  paymentUrl?: string | null;
+  paystackReference?: string | null;
   totalAmount: number;
 };
 
@@ -243,11 +245,14 @@ export async function sendCheckoutRequestEmails(input: CheckoutEmailInput) {
 
   const adminHtml = renderLayout({
     preview: `New checkout request from ${input.customerName}.`,
-    kicker: "Priority Order Request",
-    title: "New artwork checkout request",
-    intro: "A collector has submitted delivery details and selected artworks for purchase follow-up.",
+    kicker: input.paymentUrl ? "Paystack Checkout" : "Priority Order Request",
+    title: input.paymentUrl ? "New Paystack checkout started" : "New artwork checkout request",
+    intro: input.paymentUrl
+      ? "A collector has submitted delivery details and has been sent to Paystack for secure payment."
+      : "A collector has submitted delivery details and selected artworks for purchase follow-up.",
     content: `
       <p style="margin:0 0 12px;"><strong>Request ID:</strong> ${escapeHtml(input.requestId)}</p>
+      ${input.paystackReference ? `<p style="margin:0 0 12px;"><strong>Paystack reference:</strong> ${escapeHtml(input.paystackReference)}</p>` : ""}
       ${renderItems(input.items)}
       <p style="margin:18px 0 26px;font:700 17px Arial,sans-serif;color:${brand.ink};">Estimated total: ${escapeHtml(formatMoney(input.totalAmount))}</p>
       <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;">
@@ -263,16 +268,26 @@ export async function sendCheckoutRequestEmails(input: CheckoutEmailInput) {
   });
 
   const customerHtml = renderLayout({
-    preview: "Your artwork request has been received.",
-    kicker: "Checkout Request",
-    title: "Your request is with our collector care team",
-    intro:
-      "We received your selected artwork request. Our team will confirm availability, delivery handling, and the secure payment next step before final purchase.",
+    preview: input.paymentUrl
+      ? "Your secure NURALUXURYART Paystack checkout is ready."
+      : "Your artwork request has been received.",
+    kicker: input.paymentUrl ? "Secure Checkout" : "Checkout Request",
+    title: input.paymentUrl
+      ? "Complete your artwork payment"
+      : "Your request is with our collector care team",
+    intro: input.paymentUrl
+      ? "We received your selected artwork details. Complete your payment securely through Paystack, then our collector care team will confirm delivery handling."
+      : "We received your selected artwork request. Our team will confirm availability, delivery handling, and the secure payment next step before final purchase.",
     content: `
       ${renderItems(input.items)}
       <p style="margin:18px 0 20px;font:700 17px Arial,sans-serif;color:${brand.ink};">Estimated total: ${escapeHtml(formatMoney(input.totalAmount))}</p>
       <p style="margin:0;">Delivery noted for ${escapeHtml(deliverySummary)}.</p>
-      ${renderButton("Speak with collector care", siteConfig.contact.whatsappHref)}
+      ${
+        input.paymentUrl
+          ? `${renderButton("Complete Paystack payment", input.paymentUrl)}
+             <p style="margin:18px 0 0;font:400 13px/1.7 Arial,sans-serif;color:${brand.muted};">Payment reference: ${escapeHtml(input.paystackReference ?? input.requestId)}</p>`
+          : renderButton("Speak with collector care", siteConfig.contact.whatsappHref)
+      }
     `,
   });
 
